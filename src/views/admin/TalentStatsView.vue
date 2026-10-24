@@ -247,6 +247,7 @@
 </template>
 
 <script setup>
+import { compareGroups } from '../../utils/groupOrder.js';
 import { ref, computed, onMounted } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
 import { useAttendanceStore } from '../../stores/attendanceStore';
@@ -353,7 +354,7 @@ const groupRankings = computed(() => {
       totalPoints,
       avgPoints
     };
-  }).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }).sort(compareGroups);
 });
 
 // Overall Stats

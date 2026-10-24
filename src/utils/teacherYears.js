@@ -1,10 +1,4 @@
-function compareGroups(a, b) {
-  const department = group => ({part1: 1, part2: 2}[group.departmentId] || 99);
-  const order = group => Number(group.order) > 0 ? Number(group.order) : Number(group.name?.match(/\d+/)?.[0]) || Infinity;
-  if (department(a) !== department(b)) return department(a) - department(b);
-  if (order(a) !== order(b)) return order(a) - order(b);
-  return 0;
-}
+import { compareGroups } from './groupOrder.js';
 
 export function teacherGroupForYear(groups, year, teacherId) {
   return groups.filter(group => group.year === year && group.teacherId === teacherId).sort(compareGroups)[0] || null;

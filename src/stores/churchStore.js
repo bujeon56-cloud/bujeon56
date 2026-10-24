@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { compareGroups } from '../utils/groupOrder.js';
 import { DBService } from '../api/storage';
 import { teachersForYear, yearRemovalPlan, teacherGroupForYear } from '../utils/teacherYears.js';
 import { auth, db, doc, writeBatch, arrayUnion, createStaffAccount } from '../api/firebase';
@@ -20,19 +21,19 @@ export const useChurchStore = defineStore('church', {
     currentTeachers: state => teachersForYear(state.teachers, state.groups, state.currentYear),
     // Current year's groups
     currentGroups: (state) => {
-      return state.groups.filter(g => g.year === state.currentYear);
+      return state.groups.filter(g => g.year === state.currentYear).sort(compareGroups);
     },
     // Part 1 groups (sorted by order)
     part1Groups: (state) => {
       return state.groups
         .filter(g => g.year === state.currentYear && g.departmentId === 'part1')
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
+        .sort(compareGroups);
     },
     // Part 2 groups (sorted by order)
     part2Groups: (state) => {
       return state.groups
         .filter(g => g.year === state.currentYear && g.departmentId === 'part2')
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
+        .sort(compareGroups);
     },
     // Active check items
     activeCheckItems: (state) => {
