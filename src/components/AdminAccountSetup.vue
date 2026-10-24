@@ -1,5 +1,5 @@
 <template>
-  <section class="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3">
+  <section id="admin-account" class="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3">
     <h3 class="font-bold text-base">간편 관리자 계정</h3>
     <p class="text-sm text-slate-600">기존 이메일 계정을 유지하면서 관리자 아이디를 추가합니다.</p>
     <p v-if="existing" class="text-sm text-indigo-700">{{ existing.role === 'admin' ? '관리자 아이디 bujeon56이 등록되어 있습니다.' : '같은 아이디의 계정이 있어 자동으로 변경할 수 없습니다.' }}</p>

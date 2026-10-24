@@ -50,7 +50,7 @@
             :class="$route.path.includes('settings') ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'"
           >
             <Sliders class="w-4 h-4" />
-            <span>체크항목 & 달란트 설정</span>
+            <span>설정</span>
           </router-link>
 
           <router-link 
@@ -105,7 +105,7 @@
         :class="$route.path.includes('settings') ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'"
       >
         <Sliders class="w-4 h-4" />
-        <span>항목/달란트</span>
+        <span>설정</span>
       </router-link>
 
       <router-link 

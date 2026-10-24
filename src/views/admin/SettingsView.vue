@@ -1,5 +1,6 @@
 <template>
   <div class="space-y-6">
+    <h2 class="text-xl font-black text-slate-900">설정</h2>
     <AdminAccountSetup />
     <!-- Section 1: Dynamic Check Items & Talent Points Configuration -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
