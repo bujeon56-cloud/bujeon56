@@ -33,10 +33,20 @@
       <form id="admin-form" @submit.prevent="save" class="space-y-3">
         <label class="block text-sm font-bold">성함<input v-model="form.name" required maxlength="80" class="block w-full border rounded-xl p-3 mt-1" /></label>
         <label class="block text-sm font-bold">로그인 이메일<input v-model="form.email" type="email" required :disabled="!!editingId" autocomplete="off" class="block w-full border rounded-xl p-3 mt-1 disabled:bg-slate-100" /></label>
-        <p v-if="editingId" class="text-xs text-slate-500">로그인 정보는 유지되며 성함·직책·연락처를 수정할 수 있습니다.</p>
+        <p v-if="editingId" class="text-xs text-slate-500">성함·직책·연락처는 아래 저장 버튼으로 수정합니다.</p>
         <label v-else class="block text-sm font-bold">초기 비밀번호<input v-model="form.password" type="password" required minlength="6" autocomplete="new-password" class="block w-full border rounded-xl p-3 mt-1" /></label>
         <label class="block text-sm font-bold">직책<input v-model="form.position" class="block w-full border rounded-xl p-3 mt-1" /></label>
         <label class="block text-sm font-bold">연락처<input v-model="form.phone" type="tel" class="block w-full border rounded-xl p-3 mt-1" /></label>
+        <fieldset v-if="editingId" :disabled="busy" @keydown.enter.prevent="changePassword" class="space-y-3 border rounded-xl p-4">
+          <legend class="text-sm font-bold px-1">비밀번호 변경</legend>
+          <p class="text-xs text-slate-500">변경할 계정의 현재 비밀번호를 입력해주세요. 비밀번호 변경은 별도로 적용됩니다.</p>
+          <label class="block text-sm font-bold">현재 비밀번호<input v-model="passwordForm.current" type="password" autocomplete="current-password" class="block w-full border rounded-xl p-3 mt-1" /></label>
+          <label class="block text-sm font-bold">새 비밀번호<input v-model="passwordForm.next" type="password" autocomplete="new-password" class="block w-full border rounded-xl p-3 mt-1" /></label>
+          <label class="block text-sm font-bold">새 비밀번호 확인<input v-model="passwordForm.confirm" type="password" autocomplete="new-password" class="block w-full border rounded-xl p-3 mt-1" /></label>
+          <button type="button" @click="changePassword" :disabled="busy || !passwordForm.current || passwordForm.next.length < 6 || passwordForm.next !== passwordForm.confirm" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold disabled:opacity-40">비밀번호 변경</button>
+          <p v-if="passwordError" role="alert" class="text-sm text-rose-700">{{ passwordError }}</p>
+          <p v-if="passwordNotice" role="status" class="text-sm text-emerald-700">{{ passwordNotice }}</p>
+        </fieldset>
         <p v-if="formError" role="alert" class="text-sm text-rose-700">{{ formError }}</p>
       </form>
       <template #footer>
@@ -47,7 +57,8 @@
   </div>
 </template>
 <script setup>
-import {ref, computed, watch} from 'vue';
+import {ref, computed, watch, onBeforeUnmount} from 'vue';
+import {changeAdminPassword} from '../../api/firebase';
 import {isProtectedAccount} from '../../utils/protectedAccounts.js';
 import {useAuthStore, authErrorMessage} from '../../stores/authStore';
 import {useChurchStore} from '../../stores/churchStore';
@@ -61,12 +72,29 @@ const visible=ref(false),busy=ref(false),editingId=ref(null),error=ref(''),formE
 const show=computed({get:()=>visible.value,set:value=>{if(!busy.value)visible.value=value;}});
 const emptyForm=()=>({name:'',email:'',password:'',position:'',phone:''});
 const form=ref(emptyForm());
-watch(visible,value=>{if(!value)form.value=emptyForm();});
+const emptyPasswords=()=>({current:'',next:'',confirm:''});
+const passwordForm=ref(emptyPasswords()),passwordError=ref(''),passwordNotice=ref('');
+function clearPasswords(){passwordForm.value=emptyPasswords();passwordError.value='';passwordNotice.value='';}
+watch(visible,value=>{if(!value){form.value=emptyForm();clearPasswords();}});
+onBeforeUnmount(clearPasswords);
 function open(account){
   if(busy.value || isProtectedAccount(account))return;
   editingId.value=account?.id || null;
+  clearPasswords();
   form.value=account ? {name:account.name || '',email:account.email || '',password:'',position:account.position || '',phone:account.phone || ''} : emptyForm();
   formError.value='';visible.value=true;
+}
+async function changePassword(){
+  if(busy.value || !auth.isAdmin || !editingId.value)return;
+  passwordError.value='';passwordNotice.value='';
+  if(passwordForm.value.next.length<6 || !passwordForm.value.current){passwordError.value='현재 비밀번호와 6자 이상의 새 비밀번호를 입력해주세요.';return;}
+  if(passwordForm.value.next!==passwordForm.value.confirm){passwordError.value='새 비밀번호 확인이 일치하지 않습니다.';return;}
+  busy.value=true;
+  try{
+    await changeAdminPassword(editingId.value,passwordForm.value.current,passwordForm.value.next);
+    passwordForm.value=emptyPasswords();passwordNotice.value='비밀번호를 변경했습니다. 다음 로그인부터 새 비밀번호를 사용해주세요.';
+  }catch(err){passwordError.value=err.code==='auth/invalid-credential' || err.code==='auth/wrong-password' ? '해당 계정의 현재 비밀번호가 일치하지 않습니다.' : authErrorMessage(err);}
+  finally{busy.value=false;}
 }
 async function save(){
   if(busy.value || !auth.isAdmin)return;
