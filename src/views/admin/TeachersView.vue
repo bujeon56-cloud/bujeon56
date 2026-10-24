@@ -23,7 +23,6 @@
       </button>
     </div>
 
-    <router-link to="/admin/settings#admin-account" class="inline-flex items-center px-4 py-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm font-bold">관리자 계정 설정</router-link>
     <ClassAccountsSetup />
 
     <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-xl border">

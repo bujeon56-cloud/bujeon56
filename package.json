@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:unit": "node --test tests/cloud-auth.test.mjs tests/class-accounts.test.mjs tests/teacher-years.test.mjs tests/student-checks.test.mjs tests/sundays.test.mjs",
+    "test:unit": "node --test tests/cloud-auth.test.mjs tests/class-accounts.test.mjs tests/teacher-years.test.mjs tests/student-checks.test.mjs tests/sundays.test.mjs tests/admin-accounts.test.mjs",
     "test:rules": "firebase emulators:exec --only firestore --project demo-bujeon56 \"node --test tests/firestore.rules.test.mjs\""
   },
   "dependencies": {

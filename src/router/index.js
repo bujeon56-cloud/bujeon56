@@ -64,6 +64,12 @@ const routes = [
         component: () => import('../views/admin/TeachersView.vue')
       },
       {
+        path: 'accounts',
+        name: 'AdminAccounts',
+        component: () => import('../views/admin/AccountsView.vue'),
+        meta: { requiresAuth: true, role: 'admin' }
+      },
+      {
         path: 'settings',
         name: 'AdminSettings',
         component: () => import('../views/admin/SettingsView.vue')
@@ -114,6 +120,10 @@ router.beforeEach(async (to, from, next) => {
   // Admin Only Routes
   if (to.meta.role === 'admin' && !isAdmin) {
     return next('/teacher/attendance');
+  }
+
+  if (to.path === '/admin/settings' && to.hash === '#admin-account') {
+    return next({ path: '/admin/accounts', replace: true });
   }
 
   next();

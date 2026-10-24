@@ -1,0 +1,20 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+test('account management route allows admins and redirects guests and teachers',async()=>{
+ let options,guard;
+ const account={loading:false,isAuthenticated:false,isAdmin:false};
+ globalThis.__accountRoutes={createWebHistory:()=>({}),createRouter:config=>{options=config;return {beforeEach:fn=>{guard=fn;}};},useAuthStore:()=>account};
+ let source=await readFile('src/router/index.js','utf8');
+ source=source.replace(/import \{ createRouter[^\n]+\n/,'const {createRouter,createWebHistory,useAuthStore}=globalThis.__accountRoutes;\n').replace(/import \{ useAuthStore[^\n]+\n/,'').replace('import.meta.env.BASE_URL',"'/'");
+ await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+ const parent=options.routes.find(route=>route.path==='/admin');
+ const route=parent.children.find(route=>route.path==='accounts');assert.ok(route);
+ const target={meta:{...parent.meta,...route.meta},fullPath:'/admin/accounts'};
+ let result;
+ await guard(target,{},value=>{result=value;});assert.equal(result.path,'/login');assert.equal(result.query.redirect,'/admin/accounts');
+ account.isAuthenticated=true;await guard(target,{},value=>{result=value;});assert.equal(result,'/teacher/attendance');
+ account.isAdmin=true;await guard(target,{},value=>{result=value;});assert.equal(result,undefined);
+ await guard({...target,path:'/admin/settings',hash:'#admin-account'},{},value=>{result=value;});assert.equal(result.path,'/admin/accounts');
+ delete globalThis.__accountRoutes;
+});

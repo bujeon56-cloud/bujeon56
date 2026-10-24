@@ -44,6 +44,10 @@
             <span>선생님 관리</span>
           </router-link>
 
+          <router-link v-if="auth.isAdmin" to="/admin/accounts" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 flex-shrink-0" :class="$route.path.includes('accounts') ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'">
+            <KeyRound class="w-4 h-4" /><span>계정 관리</span>
+          </router-link>
+
           <router-link 
             to="/admin/settings" 
             class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 flex-shrink-0"
@@ -99,6 +103,10 @@
         <span>선생님</span>
       </router-link>
 
+      <router-link v-if="auth.isAdmin" to="/admin/accounts" class="flex flex-col items-center gap-0.5 py-1 px-1 text-[10px] font-bold transition" :class="$route.path.includes('accounts') ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'">
+        <KeyRound class="w-4 h-4" /><span>계정 관리</span>
+      </router-link>
+
       <router-link 
         to="/admin/settings" 
         class="flex flex-col items-center gap-0.5 py-1 px-2 text-[10px] font-bold transition"
@@ -123,7 +131,7 @@
 <script setup>
 import { useAuthStore } from '../../stores/authStore';
 import AppHeader from '../../components/AppHeader.vue';
-import { BarChart2, Layers, Users, Sliders, Award } from 'lucide-vue-next';
+import { BarChart2, Layers, Users, Sliders, Award, KeyRound } from 'lucide-vue-next';
 
 const auth = useAuthStore();
 </script>
