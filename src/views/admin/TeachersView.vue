@@ -26,7 +26,7 @@
     <ClassAccountsSetup />
 
     <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-xl border">
-      <p class="text-sm">{{ church.currentYear }}년 명단 · {{ selectedIds.length }}명 선택 <span class="text-xs text-slate-500">관리자는 선택할 수 없습니다.</span></p>
+      <p class="text-sm">{{ church.currentYear }}년 명단 · {{ selectedIds.length }}명 선택 <span class="text-xs text-slate-500">담당 목장 오름차순 · 미배정은 마지막에 표시</span></p>
       <button @click="deleteSelected" :disabled="!selectedIds.length || deleting" class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl disabled:opacity-40">{{ deleting ? '삭제 중…' : '선택한 선생님 삭제' }}</button>
     </div>
     <p class="text-xs text-slate-500">삭제하면 선택한 연도의 명단과 반 배정에서만 제외됩니다. 다른 연도와 학생·출석·달란트 기록은 보존됩니다.</p>
@@ -118,7 +118,7 @@
                   모든 반 관리 가능
                 </span>
                 <span
-                  v-else-if="teacher.groupId"
+                  v-else-if="church.getTeacherGroup(teacher.id)"
                   class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100"
                 >
                   <CheckSquare class="w-3.5 h-3.5" />

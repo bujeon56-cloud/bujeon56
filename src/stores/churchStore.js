@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { DBService } from '../api/storage';
-import { teachersForYear, yearRemovalPlan } from '../utils/teacherYears.js';
+import { teachersForYear, yearRemovalPlan, teacherGroupForYear } from '../utils/teacherYears.js';
 import { auth, db, doc, writeBatch, arrayUnion, createStaffAccount } from '../api/firebase';
 import { useAuthStore } from './authStore';
 
@@ -43,7 +43,7 @@ export const useChurchStore = defineStore('church', {
       return state.students.filter(s => s.groupId === groupId && s.year === state.currentYear && s.active !== false);
     },
     getTeacherGroup: (state) => (teacherId) => {
-      return state.groups.find(g => g.year === state.currentYear && g.teacherId === teacherId) || null;
+      return teacherGroupForYear(state.groups, state.currentYear, teacherId);
     },
     // Group lookup by ID
     getGroupById: (state) => (groupId) => {

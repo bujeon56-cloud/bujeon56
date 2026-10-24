@@ -29,3 +29,8 @@ test('teacher roster validates class numbers and preserves the provided names',(
  assert.equal(roster.get('260101'),'교사 가');assert.equal(roster.get('260205'),'미정');
  assert.throws(()=>parseTeacherRoster('2,9,교사'));assert.throws(()=>parseTeacherRoster('1,1,교사\n1,1,다른교사'));
 });
+
+test('full year IDs and pasted phone number forms resolve to the existing six-digit account',()=>{
+ for(const input of ['20260114','260114','２０２６０１１４','2026-01-14',' 2026 01 14 ','20260114\u200B']) assert.equal(classLoginEmail(input),'260114@accounts.bujeon56.invalid');
+ assert.equal(classLoginEmail('20260208'),'260208@accounts.bujeon56.invalid');
+});

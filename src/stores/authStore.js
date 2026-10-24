@@ -59,8 +59,10 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true;
       this.error = null;
       try {
+        const email = classLoginEmail(identifier);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('목장 아이디(예: 260114 또는 20260114)나 관리자 이메일을 입력해주세요.');
         await authReady;
-        await signInWithEmailAndPassword(auth, classLoginEmail(identifier), password);
+        await signInWithEmailAndPassword(auth, email, password);
         return await this.loadProfile();
       } catch (error) {
         this.user = null;

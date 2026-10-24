@@ -26,6 +26,7 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  await store.initAuth(); assert.equal(store.user,null); assert.equal(stored.has('bujeon_user_session'),false);
  const user=await store.login('teacher@example.com','proper-password'); assert.equal(user.id,'firebase-uid'); assert.equal(store.isAdmin,false);
  expectedEmail='260114@accounts.bujeon56.invalid';
+ await store.login('20260114','proper-password');
  await store.login('260114','proper-password');
  assert.equal(store.user.id,'firebase-uid');
  expectedEmail='teacher@example.com';
