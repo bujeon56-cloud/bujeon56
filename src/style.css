@@ -56,3 +56,19 @@
 .pb-safe {
   padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
 }
+
+/* Keep phone controls accessible with the keyboard and display cutouts. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select {
+    font-size: 16px !important;
+  }
+  button, a, select { touch-action: manipulation; }
+}
+@supports (min-height: 100dvh) {
+  body, #app { min-height: 100dvh; }
+}
+header > div {
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+nav.pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }

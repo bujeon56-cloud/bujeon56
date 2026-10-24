@@ -6,7 +6,7 @@
       @click.self="close"
     >
       <div 
-        class="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-scale-up border border-slate-100"
+        class="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85dvh] flex flex-col overflow-hidden animate-scale-up border border-slate-100"
       >
         <!-- Modal Header -->
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -22,7 +22,7 @@
         </div>
 
         <!-- Modal Body -->
-        <div class="p-6 overflow-y-auto space-y-4">
+        <div class="p-6 overflow-y-auto overscroll-contain min-h-0 space-y-4">
           <slot></slot>
         </div>
 

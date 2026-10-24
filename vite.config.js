@@ -11,26 +11,29 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.svg'],
+      includeAssets: ['apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
+        id: './',
+        start_url: './',
+        scope: './',
         name: '교회 소년부 스마트 출석부',
         short_name: '소년부 출석부',
         description: '교회 소년부 연도별/목장별 실시간 출석 및 달란트 관리 웹앱',
         theme_color: '#4f46e5',
         background_color: '#f8fafc',
         display: 'standalone',
-        orientation: 'portrait-primary',
+        orientation: 'any',
         icons: [
           {
-            src: 'pwa-192x192.svg',
+            src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/svg+xml'
+            type: 'image/png'
           },
           {
-            src: 'pwa-512x512.svg',
+            src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
+            type: 'image/png',
+            purpose: 'any'
           }
         ]
       },
