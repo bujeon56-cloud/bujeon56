@@ -308,7 +308,7 @@
                   <button
                     @click="openInspectModal(g)"
                     class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
-                    title="상세 출석부 확인"
+                    title="출석부 확인 및 수정"
                   >
                     <Eye class="w-3.5 h-3.5" />
                   </button>
@@ -329,7 +329,11 @@
         </div>
 
         <!-- Student Attendance Detail Table -->
-        <div class="max-h-80 overflow-y-auto">
+        <p class="text-xs text-indigo-700">관리자는 마감된 출석부도 수정할 수 있습니다. 저장해도 제출·마감 상태는 유지됩니다.</p>
+        <p v-if="inspectLoading" role="status" class="text-sm">출석부를 불러오는 중…</p>
+        <p v-if="inspectError" role="alert" class="text-sm text-rose-700">{{ inspectError }}</p>
+        <p v-if="inspectNotice" role="status" class="text-sm text-emerald-700">{{ inspectNotice }}</p>
+        <div class="max-h-80 overflow-auto">
           <table class="w-full text-xs">
             <thead>
               <tr class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
@@ -343,27 +347,22 @@
               <tr v-for="s in inspectingStudents" :key="s.id">
                 <td class="py-2.5 px-3 font-bold text-slate-800">{{ s.name }}</td>
                 <td v-for="item in church.activeCheckItems" :key="item.id" class="py-2.5 px-2 text-center">
-                  <span
-                    class="inline-block w-5 h-5 rounded-md text-center leading-5 font-bold text-xs"
-                    :class="inspectingRecords[s.id]?.[item.id] ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-300'"
-                  >
-                    {{ inspectingRecords[s.id]?.[item.id] ? '✓' : '-' }}
-                  </span>
+                  <input type="checkbox" :checked="!!inspectingRecords[s.id]?.[item.id]" @change="setInspectCheck(s.id, item.id, $event.target.checked)" :disabled="inspectLoading || inspectSaving || !inspectContext || !auth.isAdmin" :aria-label="s.name + ' ' + item.label" class="w-5 h-5 accent-indigo-600 disabled:opacity-40" />
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div v-if="inspectingSubmission?.notes" class="p-3 bg-slate-50 rounded-xl text-xs text-slate-600">
-          <span class="font-bold text-indigo-600">선생님 메모/기도제목: </span>
-          <span>{{ inspectingSubmission.notes }}</span>
-        </div>
+        <label v-if="inspectingSubmission" class="block text-xs font-bold text-indigo-600">선생님 메모/기도제목
+          <textarea v-model="inspectNotes" :disabled="inspectLoading || inspectSaving" rows="3" class="block w-full mt-2 border rounded-xl p-3 text-slate-700 font-normal" />
+        </label>
       </div>
 
       <template #footer>
         <button
           v-if="inspectingGroup && isGroupSubmitted(inspectingGroup.id)"
+          :disabled="inspectLoading || inspectSaving"
           @click="unlockGroupAttendance(inspectingGroup)"
           class="px-3.5 py-2 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 mr-auto flex items-center gap-1 cursor-pointer"
         >
@@ -372,20 +371,23 @@
         </button>
         <button
           @click="showInspectModal = false"
+          :disabled="inspectSaving"
           class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
         >
           닫기
         </button>
+        <button @click="saveInspect" :disabled="!auth.isAdmin || inspectLoading || inspectSaving || !inspectDirty" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl disabled:opacity-40">{{ inspectSaving ? '저장 중…' : '저장' }}</button>
       </template>
     </Modal>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, shallowRef, computed, watch } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
 import { useAttendanceStore } from '../../stores/attendanceStore';
-import { formatTeacherName } from '../../api/storage';
+import { formatTeacherName, DBService } from '../../api/storage';
+import { useAuthStore, authErrorMessage } from '../../stores/authStore';
 import Modal from '../../components/Modal.vue';
 import { sundaysInYear, sundayForYear, isSunday } from '../../utils/sundays.js';
 import {
@@ -403,15 +405,38 @@ import {
 } from 'lucide-vue-next';
 
 const church = useChurchStore();
+const auth = useAuthStore();
 const attendanceStore = useAttendanceStore();
 
 const availableSundays = computed(() => sundaysInYear(church.currentYear));
 const sundayIndex = computed(() => availableSundays.value.indexOf(attendanceStore.selectedDate));
 const selectedDept = ref('all'); // 'all', 'part1', 'part2'
-const showInspectModal = ref(false);
+const inspectVisible = ref(false);
+const inspectSaving = ref(false);
+const showInspectModal = computed({get:()=>inspectVisible.value,set:value=>{if(!inspectSaving.value)inspectVisible.value=value;}});
+const inspectLoading = ref(false), inspectError = ref(''), inspectNotice = ref('');
+const inspectOriginal = ref({}), inspectNotes = ref('');
+const inspectContext = shallowRef(null);
 const inspectingGroup = ref(null);
 const inspectingRecords = ref({});
 const inspectingSubmission = ref(null);
+watch([()=>church.currentYear,()=>attendanceStore.selectedDate],()=>{
+  inspectVisible.value=false;inspectContext.value=null;
+});
+const inspectChanges = computed(()=>{
+  const changes={};
+  for(const student of inspectingStudents.value)for(const item of church.activeCheckItems){
+    const value=!!inspectingRecords.value[student.id]?.[item.id];
+    if(value!==!!inspectOriginal.value[student.id]?.[item.id]) (changes[student.id] ||= {})[item.id]=value;
+  }
+  return changes;
+});
+const inspectDirty = computed(()=>Object.keys(inspectChanges.value).length>0 || (!!inspectingSubmission.value && inspectNotes.value!==(inspectingSubmission.value.notes || '')));
+function setInspectCheck(studentId,itemId,value){
+  if(inspectLoading.value || inspectSaving.value || !inspectContext.value || !auth.isAdmin)return;
+  inspectingRecords.value[studentId]={...inspectingRecords.value[studentId],[itemId]:value};
+  inspectNotice.value='';
+}
 
 const getFormattedTeacherName = (name) => {
   if (!name || name === '미배정') return '미배정';
@@ -569,11 +594,41 @@ const unlockGroupAttendance = async (group) => {
 
 // Inspect Modal
 const openInspectModal = async (group) => {
+  if(inspectSaving.value)return;
+  const context={year:church.currentYear,date:attendanceStore.selectedDate,groupId:group.id};
+  inspectContext.value=context;
   inspectingGroup.value = group;
-  inspectingRecords.value = attendanceStore.allDateAttendances[group.id] || {};
-  inspectingSubmission.value = attendanceStore.allDateSubmissions[group.id] || null;
+  inspectingRecords.value={};inspectOriginal.value={};inspectingSubmission.value=null;inspectNotes.value='';
+  inspectLoading.value=true;inspectError.value='';inspectNotice.value='';
   showInspectModal.value = true;
+  try{
+    const [records,submission]=await Promise.all([DBService.getGroupAttendance(context.year,context.date,group.id),DBService.getSubmissionStatus(context.year,context.date,group.id)]);
+    if(inspectContext.value!==context)return;
+    inspectOriginal.value=records || {};
+    inspectingRecords.value=JSON.parse(JSON.stringify(records || {}));
+    inspectingSubmission.value=submission;inspectNotes.value=submission?.notes || '';
+  }catch(error){if(inspectContext.value===context){inspectError.value=authErrorMessage(error);inspectLoading.value=false;inspectContext.value=null;}}
+  finally{if(inspectContext.value===context)inspectLoading.value=false;}
 };
+
+async function saveInspect(){
+  if(!auth.isAdmin || inspectLoading.value || inspectSaving.value || !inspectDirty.value || !inspectContext.value)return;
+  const context=inspectContext.value;
+  const notes=inspectingSubmission.value && inspectNotes.value!==(inspectingSubmission.value.notes || '') ? inspectNotes.value : undefined;
+  inspectSaving.value=true;inspectError.value='';inspectNotice.value='';
+  try{
+    const records=await DBService.saveAdminAttendance(context.year,context.date,context.groupId,JSON.parse(JSON.stringify(inspectChanges.value)),notes);
+    if(inspectContext.value!==context)return;
+    inspectOriginal.value=records;inspectingRecords.value=JSON.parse(JSON.stringify(records));
+    attendanceStore.allDateAttendances[context.groupId]=records;
+    if(notes!==undefined){
+      inspectingSubmission.value={...inspectingSubmission.value,notes};
+      attendanceStore.allDateSubmissions[context.groupId]={...attendanceStore.allDateSubmissions[context.groupId],...inspectingSubmission.value};
+    }
+    inspectNotice.value='수정 내용을 저장했습니다.';
+  }catch(error){if(inspectContext.value===context)inspectError.value=authErrorMessage(error);}
+  finally{inspectSaving.value=false;}
+}
 
 const inspectingStudents = computed(() => {
   if (!inspectingGroup.value) return [];

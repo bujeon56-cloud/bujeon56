@@ -474,6 +474,27 @@ export const DBService = {
     return attendances[key].records;
   },
 
+  async saveAdminAttendance(year, date, groupId, changes, notes) {
+    if (!this.isUsingCloud()) throw new Error('공용 DB 연결을 확인해주세요.');
+    const key = `${year}_${date}_${groupId}`;
+    return runTransaction(db, async transaction => {
+      const attendanceRef = doc(db, 'attendances', key);
+      const submissionRef = doc(db, 'submissions', key);
+      const attendance = await transaction.get(attendanceRef);
+      const submission = notes === undefined ? null : await transaction.get(submissionRef);
+      if (submission && !submission.exists()) throw new Error('제출 상태가 변경되었습니다. 팝업을 다시 열어주세요.');
+      const records = { ...(attendance.exists() ? attendance.data().records : {}) };
+      const timestamp = new Date().toISOString();
+      for (const [studentId, checks] of Object.entries(changes)) {
+        if (Object.values(checks).some(value => typeof value !== 'boolean')) throw new Error('체크 값을 확인해주세요.');
+        records[studentId] = { ...records[studentId], ...checks, updatedAt: timestamp };
+      }
+      if (Object.keys(changes).length) transaction.set(attendanceRef, {year, date, groupId, records, updatedAt:timestamp}, {merge:true});
+      if (submission) transaction.set(submissionRef, {notes, updatedAt:timestamp}, {merge:true});
+      return records;
+    });
+  },
+
   async resetGroupAttendance(year, date, groupId, students, checkItems) {
     const key = year + '_' + date + '_' + groupId;
     const timestamp = new Date().toISOString();

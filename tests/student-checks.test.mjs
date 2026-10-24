@@ -23,7 +23,7 @@ test('reset clears every checkbox, including custom and retired items, without m
 });
 test('cloud reset commits the whole target group once and leaves other groups untouched',async()=>{
  let source=await readFile('src/api/storage.js','utf8');
- source=source.replace(/import \{\s*db,[\s\S]+?\} from '\.\/firebase';/,`const {db,isFirebaseConfigured,collection,doc,setDoc,getDoc,getDocs,updateDoc,deleteDoc,query,where,orderBy,onSnapshot,runTransaction}=globalThis.__studentDb;`)
+ source=source.replace(/import \{\s*db,[\s\S]+?\} from '\.\/firebase';/,`const {db,isFirebaseConfigured,collection,doc,setDoc,getDoc,getDocs,updateDoc,deleteDoc,query,where,orderBy,onSnapshot}=globalThis.__studentDb; const runTransaction=(...args)=>globalThis.__studentDb.runTransaction(...args);`)
  .replace("from '../utils/studentFields.js'",`from '${import.meta.resolve('../src/utils/studentFields.js')}'`).replace("from '../utils/attendanceChecks.js'",`from '${import.meta.resolve('../src/utils/attendanceChecks.js')}'`);
  const key='attendances/2026_2026-10-25_g1';
  const docs={[key]:{year:'2026',date:'2026-10-25',groupId:'g1',records:{s:{attendance:true,prayer:true}}},other:{records:{s:{attendance:true}}}};
@@ -34,6 +34,27 @@ test('cloud reset commits the whole target group once and leaves other groups un
  assert.equal(writes,1);assert.equal(records.s.prayer,false);assert.equal(docs.other.records.s.attendance,true);
  await DBService.set('students','s',{phone:'010-1234-5678',parentPhone:'010 1111 2222'});
  assert.equal(saved.phone,'01012345678');assert.equal(saved.parentPhone,'01011112222');
+ // Administrator edits merge only changed checks, preserving concurrent changes and closed submissions.
+ const submissionKey='submissions/2026_2026-10-25_g1';
+ docs[key].records.s={attendance:false,prayer:true,custom:true,notes:'학생 메모'};
+ docs[key].records.other={attendance:true};
+ docs[submissionKey]={submitted:true,teacherId:'teacher',submittedAt:'original',notes:'이전 메모'};
+ globalThis.__studentDb.runTransaction=async(db,fn)=>{
+  const pending=[];
+  const result=await fn({get:async ref=>({exists:()=>!!docs[ref],data:()=>structuredClone(docs[ref])}),set:(ref,payload)=>pending.push([ref,payload])});
+  for(const [ref,payload] of pending)docs[ref]={...docs[ref],...payload};
+  return result;
+ };
+ const edited=await DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{attendance:true}},'수정 메모');
+ assert.equal(edited.s.attendance,true);assert.equal(edited.s.prayer,true);assert.equal(edited.s.custom,true);assert.equal(edited.s.notes,'학생 메모');assert.equal(edited.other.attendance,true);
+ assert.equal(docs[submissionKey].submitted,true);assert.equal(docs[submissionKey].submittedAt,'original');assert.equal(docs[submissionKey].teacherId,'teacher');assert.equal(docs[submissionKey].notes,'수정 메모');
+ delete docs[submissionKey];
+ await assert.rejects(DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{attendance:false}},'충돌'),/제출 상태가 변경/);
+ assert.equal(docs[key].records.s.attendance,true);
+ const before=structuredClone(docs[key]);
+ globalThis.__studentDb.runTransaction=async()=>{throw new Error('permission-denied');};
+ await assert.rejects(DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{attendance:false}}),/permission-denied/);
+ assert.deepEqual(docs[key],before);
  delete globalThis.__studentDb;
 });
 
