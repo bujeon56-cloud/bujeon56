@@ -3,7 +3,7 @@
     <!-- Top Utility & Mode Bar -->
     <div class="flex items-center justify-between gap-2 px-1">
       <!-- Large Font Mode Toggle (For Senior Teachers) -->
-      <button 
+      <button
         @click="toggleLargeFont"
         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition shadow-sm text-xs font-bold"
         :class="isLargeFont ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
@@ -15,7 +15,7 @@
 
       <!-- View Mode Toggle: Cards vs Table -->
       <div class="inline-flex rounded-xl bg-slate-200/80 p-0.5 border border-slate-200">
-        <button 
+        <button
           @click="viewMode = 'cards'"
           class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1"
           :class="viewMode === 'cards' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
@@ -23,7 +23,7 @@
           <LayoutGrid class="w-3.5 h-3.5" />
           <span>큰 카드</span>
         </button>
-        <button 
+        <button
           @click="viewMode = 'table'"
           class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1"
           :class="viewMode === 'table' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
@@ -38,8 +38,8 @@
     <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
       <div class="flex items-center justify-between gap-2">
         <!-- Prev Week Button -->
-        <button 
-          @click="changeSunday(-7)" 
+        <button
+          @click="changeSunday(-7)"
           class="w-11 h-11 sm:w-10 sm:h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition flex items-center justify-center flex-shrink-0"
           title="지난 주"
         >
@@ -50,9 +50,9 @@
         <div class="flex-1 text-center min-w-0 px-1">
           <div class="inline-flex items-center gap-1.5 bg-indigo-50/80 border border-indigo-100 px-3 py-1.5 rounded-xl">
             <Calendar class="w-4 h-4 text-indigo-600 flex-shrink-0" />
-            <input 
-              type="date" 
-              :value="attendanceStore.selectedDate" 
+            <input
+              type="date"
+              :value="attendanceStore.selectedDate"
               @change="onDateSelect"
               class="font-black text-sm sm:text-base text-slate-900 bg-transparent focus:outline-none cursor-pointer tracking-tight"
             />
@@ -63,8 +63,8 @@
         </div>
 
         <!-- Next Week Button -->
-        <button 
-          @click="changeSunday(7)" 
+        <button
+          @click="changeSunday(7)"
           class="w-11 h-11 sm:w-10 sm:h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition flex items-center justify-center flex-shrink-0"
           title="다음 주"
         >
@@ -80,7 +80,7 @@
           <span>제출 완료 (수정 불가)</span>
         </div>
         <div v-else class="flex items-center gap-1.5">
-          <span v-if="attendanceStore.saveStatus === 'saving'" class="text-indigo-600 font-bold flex items-center gap-1">
+          <span v-if="attendanceStore.loading || attendanceStore.saveStatus === 'saving'" class="text-indigo-600 font-bold flex items-center gap-1">
             <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping"></span>
             실시간 자동 저장 중...
           </span>
@@ -132,18 +132,20 @@
 
     <!-- Quick Action Bar (Mark All) -->
     <div v-if="!attendanceStore.isReadOnly && groupStudents.length > 0" class="flex items-center gap-2">
-      <button 
-        @click="markAllAttendance(true)" 
+      <button
+        @click="markAllAttendance(true)"
+        :disabled="attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
         class="flex-1 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-800 border border-emerald-200 rounded-xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-1.5 shadow-xs"
       >
         <CheckCircle2 class="w-4 h-4 text-emerald-600" />
         <span>학생 전원 출석 체크</span>
       </button>
 
-      <button 
-        @click="markAllAttendance(false)" 
+      <button
+        @click="markAllAttendance(false)"
+        :disabled="attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
         class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 active:scale-[0.98] text-slate-600 rounded-xl text-xs sm:text-sm font-bold transition"
-        title="출석 초기화"
+        title="이 반의 출석·달란트 전체 체크 해제"
       >
         초기화
       </button>
@@ -158,8 +160,8 @@
       <p class="text-xs sm:text-sm text-slate-500 mt-1 mb-5">
         우리 반 학생을 먼저 등록해주세요.<br/>선생님이 직접 등록할 수 있습니다.
       </p>
-      <router-link 
-        to="/teacher/students" 
+      <router-link
+        to="/teacher/students"
         class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-indigo-100 active:scale-95 transition"
       >
         <UserPlus class="w-5 h-5" />
@@ -172,13 +174,13 @@
     <!-- (Highly Recommended for Seniors & Smartphones) -->
     <!-- ============================================== -->
     <div v-else-if="viewMode === 'cards'" class="space-y-3">
-      <div 
-        v-for="(student, index) in groupStudents" 
+      <div
+        v-for="(student, index) in groupStudents"
         :key="student.id"
         class="bg-white rounded-2xl p-4 border transition shadow-xs flex flex-col gap-3"
         :class="[
-          isAttended(student.id) 
-            ? 'border-emerald-300 bg-gradient-to-r from-emerald-50/40 via-white to-white ring-1 ring-emerald-200' 
+          isAttended(student.id)
+            ? 'border-emerald-300 bg-gradient-to-r from-emerald-50/40 via-white to-white ring-1 ring-emerald-200'
             : 'border-slate-200/90'
         ]"
       >
@@ -186,7 +188,7 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
             <!-- Student Avatar -->
-            <div 
+            <div
               class="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-base shadow-xs flex-shrink-0"
               :class="student.gender === '여' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'"
             >
@@ -199,11 +201,11 @@
                 <span class="font-black text-base sm:text-lg text-slate-900 tracking-tight">
                   {{ student.name }}
                 </span>
-                <span v-if="student.grade" class="text-xs font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700">
-                  {{ student.grade }}
+                <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700">
+                  {{ gradeLabel(student.grade) }}
                 </span>
-                <span 
-                  v-if="isAttended(student.id)" 
+                <span
+                  v-if="isAttended(student.id)"
                   class="text-[11px] font-black px-2 py-0.5 rounded-md bg-emerald-500 text-white flex items-center gap-0.5 animate-scale-up"
                 >
                   출석함
@@ -226,11 +228,11 @@
 
         <!-- Big Touch Toggle Buttons for All Check Items -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-          <button 
-            v-for="item in church.activeCheckItems" 
+          <button
+            v-for="item in church.activeCheckItems"
             :key="item.id"
             type="button"
-            :disabled="attendanceStore.isReadOnly"
+            :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
             @click="handleCheckToggle(student.id, item.id)"
             class="min-h-[48px] py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm transition-all duration-150 flex items-center justify-between gap-2 border active:scale-95 disabled:active:scale-100 touch-manipulation cursor-pointer"
             :class="[
@@ -241,7 +243,7 @@
             ]"
           >
             <div class="flex items-center gap-2">
-              <div 
+              <div
                 class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs"
                 :class="isItemChecked(student.id, item.id) ? 'bg-white/30 text-white' : 'bg-slate-200 text-slate-400'"
               >
@@ -251,7 +253,7 @@
               <span class="tracking-tight">{{ item.label }}</span>
             </div>
 
-            <span 
+            <span
               class="text-[11px] font-bold px-1.5 py-0.5 rounded-md"
               :class="isItemChecked(student.id, item.id) ? 'bg-white/20 text-white' : 'text-slate-400'"
             >
@@ -282,8 +284,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-xs sm:text-sm text-slate-700">
-            <tr 
-              v-for="(student, index) in groupStudents" 
+            <tr
+              v-for="(student, index) in groupStudents"
               :key="student.id"
               class="hover:bg-slate-50/80 transition"
               :class="isAttended(student.id) ? 'bg-emerald-50/20' : ''"
@@ -291,14 +293,14 @@
               <td class="py-3.5 px-3 text-center font-bold text-slate-400">{{ index + 1 }}</td>
               <td class="py-3.5 px-4 font-black text-slate-900">{{ student.name }}</td>
 
-              <td 
-                v-for="item in church.activeCheckItems" 
+              <td
+                v-for="item in church.activeCheckItems"
                 :key="item.id"
                 class="py-3.5 px-3 text-center"
               >
-                <button 
+                <button
                   type="button"
-                  :disabled="attendanceStore.isReadOnly"
+                  :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
                   @click="handleCheckToggle(student.id, item.id)"
                   class="w-10 h-10 rounded-xl inline-flex items-center justify-center transition border cursor-pointer active:scale-95 disabled:cursor-not-allowed"
                   :class="isItemChecked(student.id, item.id) ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-slate-100 text-slate-300 border-slate-200'"
@@ -324,10 +326,10 @@
           <MessageSquare class="w-4 h-4 text-indigo-600" />
           <span>오늘 목장 특이사항 / 기도제목 (선택)</span>
         </label>
-        <textarea 
-          v-model="submissionNotes" 
-          rows="2" 
-          :disabled="attendanceStore.isReadOnly"
+        <textarea
+          v-model="submissionNotes"
+          rows="2"
+          :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
           placeholder="학생의 기도제목이나 심방 필요사항을 적어주시면 목사님과 서기 선생님이 확인합니다."
           class="w-full p-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 focus:bg-white transition disabled:bg-slate-100 disabled:text-slate-500"
         ></textarea>
@@ -350,7 +352,7 @@
         </div>
 
         <!-- When not yet submitted: Big High-Visibility Button -->
-        <button 
+        <button
           v-else
           @click="openSubmitConfirm"
           class="w-full py-4 px-6 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-[0.99] text-white text-sm sm:text-base font-black rounded-2xl shadow-xl shadow-indigo-200 transition duration-150 flex items-center justify-center gap-2.5 touch-manipulation cursor-pointer"
@@ -384,15 +386,15 @@
       </div>
 
       <template #footer>
-        <button 
-          @click="showSubmitModal = false" 
+        <button
+          @click="showSubmitModal = false"
           class="px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
         >
           더 수정하기
         </button>
-        <button 
-          @click="executeSubmit" 
-          :disabled="submitting"
+        <button
+          @click="executeSubmit"
+          :disabled="submitting || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
           class="px-6 py-2.5 text-xs sm:text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200 flex items-center gap-2"
         >
           <span v-if="submitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -410,6 +412,7 @@ import { useChurchStore } from '../../stores/churchStore';
 import { useAttendanceStore } from '../../stores/attendanceStore';
 import confetti from 'canvas-confetti';
 import Modal from '../../components/Modal.vue';
+import { gradeLabel } from '../../utils/studentFields.js';
 import {
   Calendar,
   ChevronLeft,
@@ -469,7 +472,7 @@ const loadData = async () => {
   if (!church.initialized) {
     await church.initChurchData();
   }
-  if (!currentGroupId.value) { attendanceStore.records = {}; attendanceStore.submission = null; return; }
+  if (!currentGroupId.value) { attendanceStore.activeGroupKey = ''; attendanceStore.records = {}; attendanceStore.submission = null; return; }
   await attendanceStore.loadGroupAttendance(church.currentYear, currentGroupId.value);
   if (attendanceStore.submission?.notes) {
     submissionNotes.value = attendanceStore.submission.notes;

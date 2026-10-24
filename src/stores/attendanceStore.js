@@ -14,6 +14,7 @@ export function getRecentSunday(date = new Date()) {
 export const useAttendanceStore = defineStore('attendance', {
   state: () => ({
     selectedDate: getRecentSunday(),
+    activeGroupKey: '',
     records: {}, // { [studentId]: { [checkItemId]: boolean, updatedAt: string } }
     submission: null, // { submitted: true, submittedAt, submittedBy, notes }
     loading: false,
@@ -59,6 +60,9 @@ export const useAttendanceStore = defineStore('attendance', {
 
     // 2. Load Attendance for a single Group
     async loadGroupAttendance(year, groupId) {
+      const context = year + '_' + this.selectedDate + '_' + groupId;
+      this.activeGroupKey = context;
+      this.saveStatus = 'idle';
       this.loading = true;
       try {
         const [records, submission] = await Promise.all([
@@ -66,18 +70,19 @@ export const useAttendanceStore = defineStore('attendance', {
           DBService.getSubmissionStatus(year, this.selectedDate, groupId)
         ]);
 
+        if (this.activeGroupKey !== context) return;
         this.records = records || {};
         this.submission = submission || null;
       } catch (err) {
         console.error('Failed to load group attendance:', err);
       } finally {
-        this.loading = false;
+        if (this.activeGroupKey === context) this.loading = false;
       }
     },
 
     // 3. Realtime Checkbox Toggle & Auto Save
     async toggleCheck(year, groupId, studentId, checkItemId) {
-      if (this.isReadOnly) {
+      if (this.isReadOnly || this.loading || this.saveStatus === 'saving') {
         console.warn('Attendance is locked/submitted. Modification disabled.');
         return;
       }
@@ -110,17 +115,29 @@ export const useAttendanceStore = defineStore('attendance', {
 
     // Set batch attendance for all students (e.g. "전체 출석" 버튼)
     async setAllAttendance(year, groupId, students, attended = true) {
-      if (this.isReadOnly) return;
+      if (this.isReadOnly || this.loading || this.saveStatus === 'saving') return;
       this.saveStatus = 'saving';
-
-      for (const s of students) {
-        const current = this.records[s.id] ? { ...this.records[s.id] } : {};
-        current['attendance'] = attended;
-        this.records[s.id] = current;
-        await DBService.saveStudentAttendance(year, this.selectedDate, groupId, s.id, current);
+      const date = this.selectedDate;
+      const context = year + '_' + date + '_' + groupId;
+      const previous = { ...this.records };
+      try {
+        if (!attended) {
+          const records = await DBService.resetGroupAttendance(year, date, groupId, students, useChurchStore().checkItems);
+          if (this.activeGroupKey === context) this.records = records;
+        } else {
+          for (const student of students) {
+            const current = {...(previous[student.id] || {}), attendance:true};
+            await DBService.saveStudentAttendance(year, date, groupId, student.id, current);
+            if (this.activeGroupKey === context) this.records[student.id] = current;
+          }
+        }
+        if (this.activeGroupKey !== context) return;
+        this.saveStatus = 'saved';
+        setTimeout(() => { if (this.activeGroupKey === context && this.saveStatus === 'saved') this.saveStatus = 'idle'; }, 2000);
+      } catch (error) {
+        if (this.activeGroupKey === context) this.saveStatus = 'error';
+        throw error;
       }
-      this.saveStatus = 'saved';
-      setTimeout(() => { this.saveStatus = 'idle'; }, 2000);
     },
 
     // 4. Submit Attendance (Locks into Read-Only Mode)

@@ -1,3 +1,5 @@
+import { normalizeStudentFields } from '../utils/studentFields.js';
+import { clearedAttendance } from '../utils/attendanceChecks.js';
 import {
   db,
   isFirebaseConfigured,
@@ -359,7 +361,7 @@ export const DBService = {
   },
 
   async set(colName, id, data) {
-    const payload = { ...data, updatedAt: new Date().toISOString() };
+    const payload = { ...(colName === 'students' ? normalizeStudentFields(data) : data), updatedAt: new Date().toISOString() };
     if (!payload.createdAt) {
       payload.createdAt = new Date().toISOString();
     }
@@ -470,6 +472,26 @@ export const DBService = {
     attendances[key].updatedAt = timestamp;
     setLocalCollection('attendances', attendances);
     return attendances[key].records;
+  },
+
+  async resetGroupAttendance(year, date, groupId, students, checkItems) {
+    const key = year + '_' + date + '_' + groupId;
+    const timestamp = new Date().toISOString();
+    if (this.isUsingCloud()) {
+      return runTransaction(db, async transaction => {
+        const ref = doc(db, 'attendances', key);
+        const snap = await transaction.get(ref);
+        const previous = snap.exists() ? snap.data() : {};
+        const records = clearedAttendance(previous.records, students, checkItems, timestamp);
+        transaction.set(ref, {...previous, year, date, groupId, records, updatedAt:timestamp});
+        return records;
+      });
+    }
+    const attendances = getLocalCollection('attendances');
+    const records = clearedAttendance(attendances[key]?.records, students, checkItems, timestamp);
+    attendances[key] = {...attendances[key],year,date,groupId,records,updatedAt:timestamp};
+    setLocalCollection('attendances', attendances);
+    return records;
   },
 
   async getSubmissionStatus(year, date, groupId) {

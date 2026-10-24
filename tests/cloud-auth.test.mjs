@@ -45,7 +45,8 @@ test('Firebase Auth identity controls login and session restoration; demo creden
 
 test('cloud failures never fall back to local storage or return success',async()=>{
  let source=await readFile('src/api/storage.js','utf8');
- source=source.replace(/import \{[\s\S]+?\} from '\.\/firebase';/,`const {db,isFirebaseConfigured,collection,doc,setDoc,getDoc,getDocs,updateDoc,deleteDoc,query,where,orderBy,onSnapshot,runTransaction}=globalThis.__dbTest;`);
+ source=source.replace(/import \{\s*db,[\s\S]+?\} from '\.\/firebase';/,`const {db,isFirebaseConfigured,collection,doc,setDoc,getDoc,getDocs,updateDoc,deleteDoc,query,where,orderBy,onSnapshot,runTransaction}=globalThis.__dbTest;`);
+ source=source.replace("from '../utils/studentFields.js'",`from '${import.meta.resolve('../src/utils/studentFields.js')}'`).replace("from '../utils/attendanceChecks.js'",`from '${import.meta.resolve('../src/utils/attendanceChecks.js')}'`);
  const failure=Object.assign(new Error('denied'),{code:'permission-denied'});
  const fail=async()=>{throw failure;};
  globalThis.__dbTest={db:{},isFirebaseConfigured:true,collection:()=>({}),doc:()=>({}),setDoc:fail,getDoc:fail,getDocs:fail,deleteDoc:fail,runTransaction:fail};

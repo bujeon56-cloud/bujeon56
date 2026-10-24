@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { normalizeStudentFields } from '../utils/studentFields.js';
 import { compareGroups } from '../utils/groupOrder.js';
 import { DBService } from '../api/storage';
 import { teachersForYear, yearRemovalPlan, teacherGroupForYear } from '../utils/teacherYears.js';
@@ -281,6 +282,7 @@ export const useChurchStore = defineStore('church', {
 
     // --- Students Management ---
     async addStudent(studentData) {
+      studentData = normalizeStudentFields(studentData);
       if (!this.currentGroups.some(g => g.id === studentData.groupId)) {
         throw new Error('선택한 연도에 배정된 반이 없습니다.');
       }
@@ -298,6 +300,7 @@ export const useChurchStore = defineStore('church', {
     },
 
     async updateStudent(id, updates) {
+      updates = normalizeStudentFields(updates);
       await DBService.set('students', id, updates);
       const idx = this.students.findIndex(s => s.id === id);
       if (idx >= 0) {

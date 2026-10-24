@@ -13,8 +13,8 @@
       </div>
 
       <!-- Add Student Button (Big Touch Friendly) -->
-      <button 
-        @click="openAddModal" 
+      <button
+        @click="openAddModal"
         class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs sm:text-sm font-black rounded-xl shadow-md shadow-indigo-100 transition flex items-center gap-1.5 flex-shrink-0 touch-manipulation cursor-pointer"
       >
         <UserPlus class="w-4 h-4" />
@@ -31,8 +31,8 @@
       <p class="text-xs sm:text-sm text-slate-500 mt-1 mb-5">
         우리 반 학생을 등록하면 출석 체크를 시작할 수 있습니다.
       </p>
-      <button 
-        @click="openAddModal" 
+      <button
+        @click="openAddModal"
         class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-indigo-100 active:scale-95 transition cursor-pointer"
       >
         <UserPlus class="w-5 h-5" />
@@ -42,8 +42,8 @@
 
     <!-- Students Card List (Optimized for Mobile Viewing & Quick Contacts) -->
     <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <div 
-        v-for="student in students" 
+      <div
+        v-for="student in students"
         :key="student.id"
         class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition flex flex-col justify-between gap-3"
       >
@@ -51,7 +51,7 @@
           <!-- Card Top: Avatar, Name, Grade & Edit/Delete -->
           <div class="flex items-start justify-between">
             <div class="flex items-center gap-3">
-              <div 
+              <div
                 class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-xs flex-shrink-0"
                 :class="student.gender === '여' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'"
               >
@@ -61,10 +61,10 @@
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="font-black text-base sm:text-lg text-slate-900">{{ student.name }}</span>
                   <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700">
-                    {{ student.grade || '초등부' }}
+                    {{ gradeLabel(student.grade) }}
                   </span>
-                  <span 
-                    class="text-[11px] font-bold px-2 py-0.5 rounded-md" 
+                  <span
+                    class="text-[11px] font-bold px-2 py-0.5 rounded-md"
                     :class="student.gender === '여' ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'"
                   >
                     {{ student.gender || '성별' }}
@@ -78,15 +78,15 @@
 
             <!-- Edit & Delete Buttons -->
             <div class="flex items-center gap-1">
-              <button 
-                @click="openEditModal(student)" 
+              <button
+                @click="openEditModal(student)"
                 class="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
                 title="수정"
               >
                 <Edit2 class="w-4 h-4" />
               </button>
-              <button 
-                @click="confirmDelete(student)" 
+              <button
+                @click="confirmDelete(student)"
                 class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                 title="삭제"
               >
@@ -106,15 +106,15 @@
         <div class="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
           <!-- Student Phone Button -->
           <div v-if="student.phone" class="flex items-center gap-1.5">
-            <a 
-              :href="`tel:${student.phone}`" 
+            <a
+              :href="`tel:${student.phone}`"
               class="flex-1 py-2 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold flex items-center justify-center gap-1.5 transition text-center"
             >
               <Phone class="w-3.5 h-3.5 text-indigo-600" />
               <span class="truncate">학생 통화</span>
             </a>
-            <a 
-              :href="`sms:${student.phone}`" 
+            <a
+              :href="`sms:${student.phone}`"
               class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold transition flex items-center justify-center"
               title="문자 보내기"
             >
@@ -127,15 +127,15 @@
 
           <!-- Parent Phone Button -->
           <div v-if="student.parentPhone" class="flex items-center gap-1.5">
-            <a 
-              :href="`tel:${student.parentPhone}`" 
+            <a
+              :href="`tel:${student.parentPhone}`"
               class="flex-1 py-2 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl font-bold flex items-center justify-center gap-1.5 transition text-center"
             >
               <Phone class="w-3.5 h-3.5 text-emerald-600" />
               <span class="truncate">부모님 통화</span>
             </a>
-            <a 
-              :href="`sms:${student.parentPhone}`" 
+            <a
+              :href="`sms:${student.parentPhone}`"
               class="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl font-bold transition flex items-center justify-center"
               title="문자 보내기"
             >
@@ -154,10 +154,10 @@
       <form @submit.prevent="saveStudent" class="space-y-4 text-xs sm:text-sm">
         <div>
           <label class="block font-black text-slate-800 mb-1">학생 이름 *</label>
-          <input 
-            v-model="form.name" 
-            type="text" 
-            required 
+          <input
+            v-model="form.name"
+            type="text"
+            required
             placeholder="학생 이름 입력"
             class="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 focus:bg-white"
           />
@@ -166,21 +166,18 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block font-black text-slate-800 mb-1">학년</label>
-            <select 
-              v-model="form.grade" 
+            <select
+              v-model="form.grade"
               class="w-full px-3 py-3 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white cursor-pointer"
             >
-              <option value="초4">초등학교 4학년</option>
-              <option value="초5">초등학교 5학년</option>
-              <option value="초6">초등학교 6학년</option>
-              <option value="기타">기타</option>
+              <option v-for="grade in STUDENT_GRADES" :key="grade.value" :value="grade.value">{{ grade.label }}</option>
             </select>
           </div>
 
           <div>
             <label class="block font-black text-slate-800 mb-1">성별</label>
-            <select 
-              v-model="form.gender" 
+            <select
+              v-model="form.gender"
               class="w-full px-3 py-3 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white cursor-pointer"
             >
               <option value="남">남학생 👦</option>
@@ -191,18 +188,20 @@
 
         <div>
           <label class="block font-black text-slate-800 mb-1">생년월일</label>
-          <input 
-            v-model="form.birthDate" 
-            type="date" 
+          <input
+            v-model="form.birthDate"
+            type="date"
             class="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 focus:bg-white cursor-pointer"
           />
         </div>
 
         <div>
           <label class="block font-black text-slate-800 mb-1">학생 연락처</label>
-          <input 
-            v-model="form.phone" 
-            type="tel" 
+          <input
+            v-model="studentPhone"
+            inputmode="tel"
+            autocomplete="tel"
+            type="tel"
             placeholder="010-0000-0000"
             class="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 focus:bg-white"
           />
@@ -210,9 +209,10 @@
 
         <div>
           <label class="block font-black text-slate-800 mb-1">부모님 연락처</label>
-          <input 
-            v-model="form.parentPhone" 
-            type="tel" 
+          <input
+            v-model="parentPhone"
+            inputmode="tel"
+            type="tel"
             placeholder="010-0000-0000"
             class="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 focus:bg-white"
           />
@@ -220,9 +220,9 @@
 
         <div>
           <label class="block font-black text-slate-800 mb-1">비고 / 기도제목</label>
-          <textarea 
-            v-model="form.notes" 
-            rows="2" 
+          <textarea
+            v-model="form.notes"
+            rows="2"
             placeholder="특이사항, 달란트 관심사, 기도제목 등"
             class="w-full p-3 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 focus:bg-white"
           ></textarea>
@@ -230,14 +230,14 @@
       </form>
 
       <template #footer>
-        <button 
-          @click="showModal = false" 
+        <button
+          @click="showModal = false"
           class="px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
         >
           취소
         </button>
-        <button 
-          @click="saveStudent" 
+        <button
+          @click="saveStudent"
           class="px-6 py-2.5 text-xs sm:text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200"
         >
           {{ isEditing ? '수정 저장' : '등록 완료' }}
@@ -252,6 +252,7 @@ import { ref, computed, watch } from 'vue';
 import { useAuthStore } from '../../stores/authStore';
 import { useChurchStore } from '../../stores/churchStore';
 import Modal from '../../components/Modal.vue';
+import { STUDENT_GRADES, studentGrade, gradeLabel, phoneDigits, formatPhone } from '../../utils/studentFields.js';
 import { Users, UserPlus, Edit2, Trash2, Phone, MessageSquare } from 'lucide-vue-next';
 
 const auth = useAuthStore();
@@ -271,6 +272,9 @@ const form = ref({
   parentPhone: '',
   notes: ''
 });
+
+const studentPhone = computed({get:()=>formatPhone(form.value.phone),set:value=>{form.value.phone=phoneDigits(value);}});
+const parentPhone = computed({get:()=>formatPhone(form.value.parentPhone),set:value=>{form.value.parentPhone=phoneDigits(value);}});
 
 const currentGroupId = computed(() => {
   return church.getTeacherGroup(auth.user?.id)?.id || '';
@@ -305,7 +309,7 @@ const openAddModal = () => {
 const openEditModal = (student) => {
   isEditing.value = true;
   editingStudentId.value = student.id;
-  form.value = { ...student };
+  form.value = { ...student, grade: studentGrade(student.grade), phone: phoneDigits(student.phone), parentPhone: phoneDigits(student.parentPhone) };
   showModal.value = true;
 };
 
@@ -319,7 +323,7 @@ const saveStudent = async () => {
   const studentData = {
     ...form.value,
     groupId: currentGroupId.value,
-    departmentId: auth.userDepartmentId || 'part1'
+    departmentId: church.getGroupById(currentGroupId.value).departmentId
   };
 
   if (isEditing.value) {

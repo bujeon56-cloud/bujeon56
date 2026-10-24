@@ -217,7 +217,7 @@
                         {{ s.name }}
                       </td>
                       <td class="py-2.5 px-3 font-medium text-slate-600">
-                        {{ s.grade || '-' }}
+                        {{ gradeLabel(s.grade) }}
                       </td>
                       <td class="py-2.5 px-3 text-center font-bold text-emerald-600">
                         {{ s.attendanceCount }}회
@@ -247,6 +247,7 @@
 </template>
 
 <script setup>
+import { gradeLabel } from '../../utils/studentFields.js';
 import { compareGroups } from '../../utils/groupOrder.js';
 import { ref, computed, onMounted } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
@@ -321,7 +322,7 @@ const allStudentStats = computed(() => {
     return {
       id: student.id,
       name: student.name,
-      grade: student.grade || '',
+      grade: gradeLabel(student.grade),
       groupId: student.groupId,
       groupName,
       departmentId: student.departmentId,
