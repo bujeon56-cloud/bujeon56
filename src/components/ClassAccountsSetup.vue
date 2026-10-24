@@ -1,8 +1,11 @@
 <template>
   <section class="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 space-y-3">
+    <!-- 2026년 목장별 로그인 계정 안내
     <h3 class="font-bold text-indigo-900">2026년 목장별 로그인 계정</h3>
     <p class="text-sm text-indigo-900">1부 1~14목장: 260101~260114 · 2부 1~8목장: 260201~260208</p>
-    <button @click="prepare" :disabled="busy" class="bg-indigo-600 text-white font-bold rounded-xl px-4 py-3 disabled:opacity-50">2026년 22개 목장 계정 준비</button>
+    -->
+    <h3 class="font-bold text-indigo-900">선생님 일괄 등록</h3>
+    <button @click="prepare" :disabled="busy" class="bg-indigo-600 text-white font-bold rounded-xl px-4 py-3 disabled:opacity-50">2026년 선생님 일괄 등록</button>
     <Modal v-model="show" title="2026년 목장 계정 생성">
       <div class="space-y-3 text-sm">
         <p>각 계정은 자기 반의 학생·출석·달란트만 관리합니다. 이미 배정된 교사 계정은 유지합니다.</p>

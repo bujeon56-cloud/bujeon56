@@ -1,6 +1,19 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+
+test('admin deletion rejects self, teacher and unknown targets and preserves state on failure',async()=>{
+ const source=await readFile('src/stores/churchStore.js','utf8');
+ const body=source.match(/async deleteAdminAccount\(id\) \{([\s\S]*?)\n    \},/)[1];
+ const identity={uid:'self'},permission={isAdmin:true},deleted=[];
+ let fail=false;
+ const remove=new Function('useAuthStore','auth','DBService',`return async function(id){${body}}`)(()=>permission,{currentUser:identity},{delete:async(collection,id)=>{if(fail)throw new Error('write failed');deleted.push([collection,id]);}});
+ const state={teachers:[{id:'self',role:'admin'},{id:'other',role:'admin'},{id:'teacher',role:'teacher'}]};
+ for(const id of ['self','teacher','missing'])await assert.rejects(remove.call(state,id));
+ permission.isAdmin=false;await assert.rejects(remove.call(state,'other'));permission.isAdmin=true;
+ fail=true;await assert.rejects(remove.call(state,'other'),/write failed/);assert.equal(state.teachers.length,3);
+ fail=false;await remove.call(state,'other');assert.deepEqual(deleted,[['users','other']]);assert.deepEqual(state.teachers.map(t=>t.id),['self','teacher']);
+});
 test('account management route allows admins and redirects guests and teachers',async()=>{
  let options,guard;
  const account={loading:false,isAuthenticated:false,isAdmin:false};

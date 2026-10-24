@@ -280,6 +280,15 @@ export const useChurchStore = defineStore('church', {
       return this.deleteTeachersForYear([id]);
     },
 
+    async deleteAdminAccount(id) {
+      if (!useAuthStore().isAdmin) throw new Error('관리자만 계정을 삭제할 수 있습니다.');
+      if (id === auth.currentUser?.uid) throw new Error('현재 로그인한 계정은 삭제할 수 없습니다.');
+      if (!this.teachers.some(t => t.id === id && t.role === 'admin')) throw new Error('관리자 계정을 찾을 수 없습니다.');
+      // Removing the staff profile revokes app and database access. Auth identity is retained.
+      await DBService.delete('users', id);
+      this.teachers = this.teachers.filter(t => t.id !== id);
+    },
+
     // --- Students Management ---
     async addStudent(studentData) {
       studentData = normalizeStudentFields(studentData);

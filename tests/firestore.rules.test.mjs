@@ -79,3 +79,15 @@ test('admin can manage all classes but cannot store passwords or remove own admi
  await assertSucceeds(deleteDoc(doc(db,'users','teacher')));
  await assertFails(getDoc(doc(env.authenticatedContext('teacher').firestore(),'students','a')));
 });
+
+test('deleting another administrator revokes access even with an existing authenticated session',async()=>{
+ const db=env.authenticatedContext('admin').firestore();
+ await assertSucceeds(setDoc(doc(db,'users','second-admin'),{role:'admin',name:'추가 관리자'}));
+ const second=env.authenticatedContext('second-admin').firestore();
+ await assertSucceeds(getDocs(collection(second,'students')));
+ await assertFails(deleteDoc(doc(env.authenticatedContext('teacher').firestore(),'users','second-admin')));
+ await assertSucceeds(updateDoc(doc(db,'users','second-admin'),{name:'수정된 관리자'}));
+ await assertSucceeds(deleteDoc(doc(db,'users','second-admin')));
+ await assertFails(getDocs(collection(second,'students')));
+ await assertFails(setDoc(doc(second,'users','second-admin'),{role:'admin'}));
+});

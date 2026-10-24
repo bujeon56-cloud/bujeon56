@@ -23,11 +23,13 @@
       </button>
     </div>
 
+    <!-- 목장별 로그인 계정 안내는 숨김: 일괄 등록은 설정에서 진행합니다.
     <ClassAccountsSetup />
+    -->
 
     <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-xl border">
       <p class="text-sm">{{ church.currentYear }}년 명단 · {{ selectedIds.length }}명 선택 <span class="text-xs text-slate-500">담당 목장 오름차순 · 미배정은 마지막에 표시</span></p>
-      <button @click="deleteSelected" :disabled="!selectedIds.length || deleting" class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl disabled:opacity-40">{{ deleting ? '삭제 중…' : '선택한 선생님 삭제' }}</button>
+      <button @click="deleteSelected" :disabled="!selectedIds.length || deleting" class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl disabled:opacity-40">{{ deleting ? '삭제 중…' : '삭제' }}</button>
     </div>
     <p class="text-xs text-slate-500">삭제하면 선택한 연도의 명단과 반 배정에서만 제외됩니다. 다른 연도와 학생·출석·달란트 기록은 보존됩니다.</p>
     <!-- Teachers Table -->
@@ -299,7 +301,6 @@ import { ref, computed, watch } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
 import { formatTeacherName, DBService } from '../../api/storage';
 import Modal from '../../components/Modal.vue';
-import ClassAccountsSetup from '../../components/ClassAccountsSetup.vue';
 import { UserPlus, Shield, CheckSquare, Edit2, Trash2, Key } from 'lucide-vue-next';
 
 const church = useChurchStore();
