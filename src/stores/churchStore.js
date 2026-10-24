@@ -38,6 +38,9 @@ export const useChurchStore = defineStore('church', {
     getStudentsByGroup: (state) => (groupId) => {
       return state.students.filter(s => s.groupId === groupId && s.year === state.currentYear && s.active !== false);
     },
+    getTeacherGroup: (state) => (teacherId) => {
+      return state.groups.find(g => g.year === state.currentYear && g.teacherId === teacherId) || null;
+    },
     // Group lookup by ID
     getGroupById: (state) => (groupId) => {
       return state.groups.find(g => g.id === groupId) || null;
@@ -82,7 +85,8 @@ export const useChurchStore = defineStore('church', {
     },
 
     // Add New Year
-    async addNewYear(newYear, copyPreviousSettings = true) {
+    async addNewYear(newYear, copyPreviousSettings = false) {
+      const sourceYear = this.currentYear;
       const yearId = String(newYear);
       const exists = this.years.some(y => y.id === yearId);
       if (exists) {
@@ -110,12 +114,10 @@ export const useChurchStore = defineStore('church', {
 
       // Copy groups from previous year if requested
       if (copyPreviousSettings) {
-        const prevYear = String(Number(newYear) - 1);
-        const prevGroups = this.groups.filter(g => g.year === prevYear);
-        const sourceGroups = prevGroups.length > 0 ? prevGroups : this.groups.filter(g => g.year === '2026');
+        const sourceGroups = this.groups.filter(g => g.year === sourceYear);
 
         for (const g of sourceGroups) {
-          const newGroupId = `${g.departmentId}_${yearId}_g${g.order}`;
+          const newGroupId = `${g.id}_${yearId}`;
           const newGroup = {
             ...g,
             id: newGroupId,
@@ -223,15 +225,18 @@ export const useChurchStore = defineStore('church', {
       await DBService.set('users', id, updates);
       const idx = this.teachers.findIndex(t => t.id === id);
       if (idx >= 0) {
-        const oldGroup = this.teachers[idx].groupId;
+        const oldGroup = this.getTeacherGroup(id)?.id;
         this.teachers[idx] = { ...this.teachers[idx], ...updates };
 
         // If groupId changed, update group info
-        if (updates.groupId && updates.groupId !== oldGroup) {
+        if (Object.hasOwn(updates, 'groupId') && updates.groupId !== oldGroup) {
+          if (oldGroup) await this.updateGroup(oldGroup, { teacherId: null, teacherName: '미배정' });
+          if (updates.groupId) {
           await this.updateGroup(updates.groupId, {
             teacherId: id,
             teacherName: this.teachers[idx].name
           });
+          }
         }
       }
     },
@@ -250,11 +255,14 @@ export const useChurchStore = defineStore('church', {
 
     // --- Students Management ---
     async addStudent(studentData) {
+      if (!this.currentGroups.some(g => g.id === studentData.groupId)) {
+        throw new Error('선택한 연도에 배정된 반이 없습니다.');
+      }
       const id = `s_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
       const newStudent = {
         id,
-        year: this.currentYear,
         ...studentData,
+        year: this.currentYear,
         active: true,
         createdAt: new Date().toISOString()
       };

@@ -248,7 +248,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useAuthStore } from '../../stores/authStore';
 import { useChurchStore } from '../../stores/churchStore';
 import Modal from '../../components/Modal.vue';
@@ -258,6 +258,7 @@ const auth = useAuthStore();
 const church = useChurchStore();
 
 const showModal = ref(false);
+watch(() => church.currentYear, () => { showModal.value = false; });
 const isEditing = ref(false);
 const editingStudentId = ref(null);
 
@@ -272,13 +273,13 @@ const form = ref({
 });
 
 const currentGroupId = computed(() => {
-  return auth.userGroupId || 'part1_g1';
+  return church.getTeacherGroup(auth.user?.id)?.id || '';
 });
 
 const currentGroupName = computed(() => {
-  if (auth.user?.groupName) return auth.user.groupName;
+
   const g = church.getGroupById(currentGroupId.value);
-  return g ? `${g.departmentName} ${g.name}` : '목장';
+  return g ? `${g.departmentName} ${g.name}` : '이 연도에 배정된 반이 없습니다';
 });
 
 const students = computed(() => {
@@ -286,6 +287,7 @@ const students = computed(() => {
 });
 
 const openAddModal = () => {
+  if (!currentGroupId.value) return alert('선택한 연도에 반을 먼저 배정해주세요.');
   isEditing.value = false;
   editingStudentId.value = null;
   form.value = {
@@ -308,6 +310,7 @@ const openEditModal = (student) => {
 };
 
 const saveStudent = async () => {
+  if (!currentGroupId.value) return alert('선택한 연도에 반을 먼저 배정해주세요.');
   if (!form.value.name.trim()) {
     alert('아이 이름을 입력해주세요.');
     return;

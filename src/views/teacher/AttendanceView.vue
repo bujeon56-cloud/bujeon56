@@ -451,13 +451,13 @@ watch(viewMode, (newVal) => {
 });
 
 const currentGroupId = computed(() => {
-  return auth.userGroupId || 'part1_g1';
+  return church.getTeacherGroup(auth.user?.id)?.id || '';
 });
 
 const currentGroupName = computed(() => {
-  if (auth.user?.groupName) return auth.user.groupName;
+
   const g = church.getGroupById(currentGroupId.value);
-  return g ? `${g.departmentName} ${g.name}` : '목장';
+  return g ? `${g.departmentName} ${g.name}` : '이 연도에 배정된 반이 없습니다';
 });
 
 const groupStudents = computed(() => {
@@ -512,6 +512,7 @@ const isAttended = (studentId) => {
 
 // Touch Check Toggle with Haptic Feedback
 const handleCheckToggle = async (studentId, itemId) => {
+  if (!currentGroupId.value) return alert('선택한 연도에 반을 먼저 배정해주세요.');
   if (navigator.vibrate) {
     try { navigator.vibrate(25); } catch (e) {}
   }
@@ -528,6 +529,7 @@ const getActivePillClass = (itemId) => {
 
 // Mark all attended
 const markAllAttendance = async (val) => {
+  if (!currentGroupId.value) return alert('선택한 연도에 반을 먼저 배정해주세요.');
   if (navigator.vibrate) {
     try { navigator.vibrate(40); } catch (e) {}
   }
@@ -568,6 +570,7 @@ const openSubmitConfirm = () => {
 };
 
 const executeSubmit = async () => {
+  if (!currentGroupId.value) return alert('선택한 연도에 반을 먼저 배정해주세요.');
   submitting.value = true;
   try {
     await attendanceStore.submitCurrentGroup(

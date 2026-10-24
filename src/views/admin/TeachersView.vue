@@ -357,12 +357,8 @@ const getCodeFromGroup = (teacher) => {
 };
 
 const getTeacherGroupName = (teacher) => {
-  if (teacher.groupName) return teacher.groupName;
-  if (teacher.groupId) {
-    const g = church.getGroupById(teacher.groupId);
-    if (g) return `${g.departmentName} ${g.name}`;
-  }
-  return '목장';
+  const g = church.getTeacherGroup(teacher.id);
+  return g ? [g.departmentName, g.name].join(' ') : '미배정';
 };
 
 const openPasswordModal = (teacher) => {
@@ -415,9 +411,9 @@ const openEditModal = (teacher) => {
     phone: teacher.phone || '',
     role: teacher.role || 'teacher',
     position: teacher.position || '',
-    groupId: teacher.groupId || null,
-    groupName: teacher.groupName || '',
-    departmentId: teacher.departmentId || ''
+    groupId: church.getTeacherGroup(teacher.id)?.id || null,
+    groupName: church.getTeacherGroup(teacher.id)?.name || '',
+    departmentId: church.getTeacherGroup(teacher.id)?.departmentId || ''
   };
   showModal.value = true;
 };

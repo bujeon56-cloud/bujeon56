@@ -212,10 +212,10 @@
               type="checkbox" 
               class="w-4 h-4 rounded text-indigo-600 accent-indigo-600"
             />
-            <span class="font-bold text-indigo-900 text-xs">현재 목장 구조(1부 14목장, 2부 7목장) 자동 복사 생성</span>
+            <span class="font-bold text-indigo-900 text-xs">선택한 연도의 반 이름과 순서만 복사</span>
           </label>
           <p class="text-[11px] text-indigo-700 pl-6 leading-relaxed">
-            체크 시 목장 구조(1부 1~14목장, 2부 1~7목장)가 새 연도에 맞춰 자동으로 생성되어 신학기 준비가 수월해집니다.
+            기본은 빈 반·학생 명단으로 시작합니다. 선택해도 학생, 교사 배정, 출석 기록은 복사되지 않습니다. 이전 연도 자료는 보존됩니다.
           </p>
         </div>
       </form>
@@ -257,7 +257,7 @@ const itemForm = ref({
 
 const showYearModal = ref(false);
 const newYearInput = ref(Number(church.currentYear) + 1);
-const copyPreviousGroups = ref(true);
+const copyPreviousGroups = ref(false);
 
 const getItemColorClass = (item) => {
   if (item.id === 'attendance') return 'bg-emerald-50 text-emerald-600';
@@ -316,6 +316,7 @@ const confirmDeleteCheckItem = async (item) => {
 
 // Year Actions
 const openAddYearModal = () => {
+  copyPreviousGroups.value = false;
   newYearInput.value = Number(church.currentYear) + 1;
   showYearModal.value = true;
 };
