@@ -100,9 +100,12 @@
               <span class="font-bold text-indigo-600">{{ getStudentsCount(group.id) }}명</span>
             </div>
           </div>
+          <button @click="openStudents(group)" :aria-label="group.departmentName + ' ' + group.name + ' 학생 관리'" class="mt-4 w-full px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-sm hover:bg-indigo-100">학생 관리</button>
         </div>
       </div>
     </div>
+
+    <GroupStudentsManager v-model="showStudents" :group-id="studentGroupId" />
 
     <!-- Group Add/Edit Modal -->
     <Modal v-model="showModal" :title="isEditing ? '목장 정보 수정' : '새 목장 추가'">
@@ -184,14 +187,18 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
 import { formatTeacherName } from '../../api/storage';
 import Modal from '../../components/Modal.vue';
+import GroupStudentsManager from '../../components/GroupStudentsManager.vue';
 import { Plus, Edit2, Trash2 } from 'lucide-vue-next';
 
 const church = useChurchStore();
 const activeDept = ref('part1');
+const showStudents=ref(false),studentGroupId=ref('');
+function openStudents(group){studentGroupId.value=group.id;showStudents.value=true;}
+watch(()=>church.currentYear,()=>{showStudents.value=false;studentGroupId.value='';showModal.value=false;});
 
 const showModal = ref(false);
 const isEditing = ref(false);
