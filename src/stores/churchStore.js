@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { isProtectedAccount } from '../utils/protectedAccounts.js';
 import { normalizeStudentFields } from '../utils/studentFields.js';
 import { compareGroups } from '../utils/groupOrder.js';
 import { DBService } from '../api/storage';
@@ -242,6 +243,7 @@ export const useChurchStore = defineStore('church', {
     async updateTeacher(id, updates) {
       const { password, ...safeUpdates } = updates;
       const previous = this.teachers.find(t => t.id === id);
+      if (isProtectedAccount({ ...previous, id })) throw new Error('보호된 관리자 계정은 수정할 수 없습니다.');
       if (id === auth.currentUser?.uid && safeUpdates.role && safeUpdates.role !== previous?.role) throw new Error('현재 로그인한 관리자 역할은 변경할 수 없습니다.');
       if (safeUpdates.email && previous?.email !== safeUpdates.email) throw new Error('이메일 변경은 Firebase Authentication 콘솔에서 처리해주세요.');
       updates = safeUpdates;
@@ -284,6 +286,7 @@ export const useChurchStore = defineStore('church', {
     },
 
     async deleteAdminAccount(id) {
+      if (isProtectedAccount({ ...this.teachers.find(t => t.id === id), id })) throw new Error('보호된 관리자 계정은 삭제할 수 없습니다.');
       if (!useAuthStore().isAdmin) throw new Error('관리자만 계정을 삭제할 수 있습니다.');
       if (id === auth.currentUser?.uid) throw new Error('현재 로그인한 계정은 삭제할 수 없습니다.');
       if (!this.teachers.some(t => t.id === id && t.role === 'admin')) throw new Error('관리자 계정을 찾을 수 없습니다.');

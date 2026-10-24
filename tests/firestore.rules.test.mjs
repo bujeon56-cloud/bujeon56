@@ -8,6 +8,24 @@ const groupB = 'part2_2026_g1';
 const recordA = `2026_2026-10-25_${groupA}`;
 const recordB = `2026_2026-10-25_${groupB}`;
 const attendance = groupId => ({year:'2026', date:'2026-10-25', groupId, records:{student:{attendance:true}}});
+
+test('original administrator profile is immutable by UID and email, including to itself',async()=>{
+ const uid='Y24ONBZTuiT9BKXp1Q9F1RGLWPE2';
+ await env.withSecurityRulesDisabled(async context=>{
+  await setDoc(doc(context.firestore(),'users',uid),{role:'admin',email:'bujeon56@gmail.com',name:'원본'});
+  await setDoc(doc(context.firestore(),'users','email-protected'),{role:'admin',email:'BUJEON56@gmail.com'});
+ });
+ for(const actor of ['admin',uid]){
+  const db=env.authenticatedContext(actor).firestore();
+  for(const target of [uid,'email-protected']){
+   await assertSucceeds(getDoc(doc(db,'users',target)));
+   await assertFails(updateDoc(doc(db,'users',target),{name:'변경'}));
+   await assertFails(updateDoc(doc(db,'users',target),{email:'other@example.com',role:'teacher'}));
+   await assertFails(setDoc(doc(db,'users',target),{role:'admin',name:'덮어쓰기'}));
+   await assertFails(deleteDoc(doc(db,'users',target)));
+  }
+ }
+});
 before(async () => {
   env = await initializeTestEnvironment({projectId:'demo-bujeon56',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('firestore.rules','utf8')}});
 });

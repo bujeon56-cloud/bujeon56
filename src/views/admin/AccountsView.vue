@@ -15,8 +15,11 @@
             <td class="p-3">{{ account.email === classLoginEmail('bujeon56') ? 'bujeon56' : account.email }}</td>
             <td class="p-3">{{ account.position || '-' }}</td><td class="p-3">{{ account.phone || '-' }}</td>
             <td class="p-3"><div class="flex gap-2 whitespace-nowrap">
-              <button @click="open(account)" :disabled="busy" class="px-3 py-2 border rounded-xl">수정</button>
-              <button @click="remove(account)" :disabled="busy || account.id === auth.user?.id" class="px-3 py-2 rounded-xl bg-rose-600 text-white disabled:opacity-40">삭제</button>
+              <span v-if="isProtectedAccount(account)" class="text-slate-500">보호된 관리자 계정</span>
+              <template v-else>
+                <button @click="open(account)" :disabled="busy" class="px-3 py-2 border rounded-xl">수정</button>
+                <button @click="remove(account)" :disabled="busy || account.id === auth.user?.id" class="px-3 py-2 rounded-xl bg-rose-600 text-white disabled:opacity-40">삭제</button>
+              </template>
             </div></td>
           </tr><tr v-if="!admins.length"><td colspan="5" class="p-4 text-slate-500">등록된 관리자 계정이 없습니다.</td></tr></tbody>
         </table>
@@ -45,6 +48,7 @@
 </template>
 <script setup>
 import {ref, computed, watch} from 'vue';
+import {isProtectedAccount} from '../../utils/protectedAccounts.js';
 import {useAuthStore, authErrorMessage} from '../../stores/authStore';
 import {useChurchStore} from '../../stores/churchStore';
 import {classLoginEmail} from '../../utils/classAccounts.js';
@@ -59,7 +63,7 @@ const emptyForm=()=>({name:'',email:'',password:'',position:'',phone:''});
 const form=ref(emptyForm());
 watch(visible,value=>{if(!value)form.value=emptyForm();});
 function open(account){
-  if(busy.value)return;
+  if(busy.value || isProtectedAccount(account))return;
   editingId.value=account?.id || null;
   form.value=account ? {name:account.name || '',email:account.email || '',password:'',position:account.position || '',phone:account.phone || ''} : emptyForm();
   formError.value='';visible.value=true;
@@ -71,6 +75,7 @@ async function save(){
     const profile={name:form.value.name.trim(),position:form.value.position.trim(),phone:form.value.phone.trim(),role:'admin'};
     if(!profile.name)throw new Error('성함을 입력해주세요.');
     if(editingId.value){
+      if(isProtectedAccount(admins.value.find(a=>a.id===editingId.value)))throw new Error('보호된 관리자 계정은 수정할 수 없습니다.');
       if(!admins.value.some(a=>a.id===editingId.value))throw new Error('관리자 계정을 찾을 수 없습니다.');
       await church.updateTeacher(editingId.value,profile);
     }else{
@@ -81,7 +86,7 @@ async function save(){
   finally{busy.value=false;}
 }
 async function remove(account){
-  if(busy.value || !auth.isAdmin || account.id===auth.user?.id)return;
+  if(busy.value || !auth.isAdmin || account.id===auth.user?.id || isProtectedAccount(account))return;
   if(!confirm(account.name+' 관리자 등록을 삭제하시겠습니까? 서비스 데이터 접근 권한이 제거됩니다. Firebase 로그인 계정 자체는 남습니다.'))return;
   busy.value=true;error.value='';notice.value='';
   try{await church.deleteAdminAccount(account.id);notice.value='관리자 등록과 데이터 접근 권한을 삭제했습니다.';}

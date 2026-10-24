@@ -20,13 +20,23 @@ service cloud.firestore {
         && data.date.matches('^' + data.year + '-[0-9]{2}-[0-9]{2}$');
     }
     match /users/{uid} {
+      function protectedAccount() {
+        return uid == 'Y24ONBZTuiT9BKXp1Q9F1RGLWPE2'
+          || resource.data.get('email', '').lower() == 'bujeon56@gmail.com';
+      }
       allow get: if signedIn() && (request.auth.uid == uid || admin());
       allow list: if admin();
-      allow create, update: if admin()
+      allow create: if admin()
+        && uid != 'Y24ONBZTuiT9BKXp1Q9F1RGLWPE2'
+        && request.resource.data.get('email', '').lower() != 'bujeon56@gmail.com'
+        && request.resource.data.role in ['admin', 'teacher']
+        && !request.resource.data.keys().hasAny(['password']);
+      allow update: if admin() && !protectedAccount()
+        && request.resource.data.get('email', '').lower() != 'bujeon56@gmail.com'
         && request.resource.data.role in ['admin', 'teacher']
         && !request.resource.data.keys().hasAny(['password'])
         && (request.auth.uid != uid || request.resource.data.role == resource.data.role);
-      allow delete: if admin() && request.auth.uid != uid;
+      allow delete: if admin() && request.auth.uid != uid && !protectedAccount();
     }
     match /years/{id} {
       allow read: if staff();
