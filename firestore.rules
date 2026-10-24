@@ -1,10 +1,70 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 교회 소년부 출석부 보안 규칙
-    // 인증된 사용자 또는 앱 사용자 접근 허용
-    match /{document=**} {
-      allow read, write: if true;
+    function signedIn() { return request.auth != null; }
+    function staff() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'teacher'];
+    }
+    function admin() {
+      return staff() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function ownGroup(groupId) {
+      return staff() && get(/databases/$(database)/documents/groups/$(groupId)).data.teacherId == request.auth.uid;
+    }
+    function groupAccess(groupId) { return admin() || ownGroup(groupId); }
+    function recordGroup(recordId) { return recordId.replace('^[^_]+_[^_]+_', ''); }
+    function validRecord(recordId, data) {
+      return recordId == data.year + '_' + data.date + '_' + data.groupId
+        && data.year == get(/databases/$(database)/documents/groups/$(data.groupId)).data.year
+        && data.date.matches('^' + data.year + '-[0-9]{2}-[0-9]{2}$');
+    }
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || admin());
+      allow list: if admin();
+      allow create, update: if admin()
+        && request.resource.data.role in ['admin', 'teacher']
+        && !request.resource.data.keys().hasAny(['password'])
+        && (request.auth.uid != uid || request.resource.data.role == resource.data.role);
+      allow delete: if admin() && request.auth.uid != uid;
+    }
+    match /years/{id} {
+      allow read: if staff();
+      allow write: if admin();
+    }
+    match /checkItems/{id} {
+      allow read: if staff();
+      allow write: if admin();
+    }
+    match /groups/{groupId} {
+      allow read: if admin() || (staff() && resource.data.teacherId == request.auth.uid);
+      allow write: if admin();
+    }
+    match /students/{id} {
+      allow read, delete: if groupAccess(resource.data.groupId);
+      allow create: if groupAccess(request.resource.data.groupId)
+        && request.resource.data.year == get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.year;
+      allow update: if groupAccess(resource.data.groupId)
+        && groupAccess(request.resource.data.groupId)
+        && request.resource.data.year == resource.data.year
+        && request.resource.data.year == get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.year;
+    }
+    match /attendances/{recordId} {
+      allow get: if groupAccess(recordGroup(recordId));
+      allow list: if admin();
+      allow create, update: if validRecord(recordId, request.resource.data)
+        && (admin() || (ownGroup(request.resource.data.groupId)
+          && !exists(/databases/$(database)/documents/submissions/$(recordId))));
+      allow delete: if admin();
+    }
+    match /submissions/{recordId} {
+      allow get: if groupAccess(recordGroup(recordId));
+      allow list: if admin();
+      allow create: if validRecord(recordId, request.resource.data)
+        && groupAccess(request.resource.data.groupId)
+        && request.resource.data.teacherId == request.auth.uid
+        && request.resource.data.submitted == true;
+      allow update, delete: if admin();
     }
   }
 }

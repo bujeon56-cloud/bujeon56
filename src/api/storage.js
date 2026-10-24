@@ -11,7 +11,8 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  runTransaction
 } from './firebase';
 
 const LOCAL_STORAGE_PREFIX = 'bujeon_db_';
@@ -309,9 +310,10 @@ export const DBService = {
           q = query(q, ...constraints);
         }
         const snap = await getDocs(q);
-        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       } catch (err) {
-        console.warn(`Firestore getAll ${colName} error, fallback to local:`, err);
+        console.warn(`Firestore getAll ${colName} error:`, err);
+        throw err;
       }
     }
 
@@ -338,11 +340,12 @@ export const DBService = {
         const docRef = doc(db, colName, id);
         const snap = await getDoc(docRef);
         if (snap.exists()) {
-          return { id: snap.id, ...snap.data() };
+          return { ...snap.data(), id: snap.id };
         }
         return null;
       } catch (err) {
         console.warn(`Firestore getOne ${colName}/${id} error:`, err);
+        throw err;
       }
     }
 
@@ -368,6 +371,7 @@ export const DBService = {
         return { id, ...payload };
       } catch (err) {
         console.warn(`Firestore set ${colName}/${id} error:`, err);
+        throw err;
       }
     }
 
@@ -395,6 +399,7 @@ export const DBService = {
         return true;
       } catch (err) {
         console.warn(`Firestore delete ${colName}/${id} error:`, err);
+        throw err;
       }
     }
 
@@ -420,6 +425,7 @@ export const DBService = {
         return {};
       } catch (err) {
         console.warn('Firestore getGroupAttendance error:', err);
+        throw err;
       }
     }
 
@@ -434,22 +440,16 @@ export const DBService = {
     if (this.isUsingCloud()) {
       try {
         const docRef = doc(db, 'attendances', key);
-        const snap = await getDoc(docRef);
-        let currentRecords = snap.exists() ? snap.data().records || {} : {};
-        currentRecords[studentId] = {
-          ...checkValues,
-          updatedAt: timestamp
-        };
-        await setDoc(docRef, {
-          year,
-          date,
-          groupId,
-          records: currentRecords,
-          updatedAt: timestamp
-        }, { merge: true });
-        return currentRecords;
+        return await runTransaction(db, async transaction => {
+          const snap = await transaction.get(docRef);
+          const records = snap.exists() ? snap.data().records || {} : {};
+          records[studentId] = { ...checkValues, updatedAt: timestamp };
+          transaction.set(docRef, { year, date, groupId, records, updatedAt: timestamp }, { merge: true });
+          return records;
+        });
       } catch (err) {
         console.warn('Firestore saveStudentAttendance error:', err);
+        throw err;
       }
     }
 
@@ -483,6 +483,7 @@ export const DBService = {
         return null;
       } catch (err) {
         console.warn('Firestore getSubmissionStatus error:', err);
+        throw err;
       }
     }
 
@@ -511,6 +512,7 @@ export const DBService = {
         return submissionData;
       } catch (err) {
         console.warn('Firestore submitAttendance error:', err);
+        throw err;
       }
     }
 
@@ -528,6 +530,7 @@ export const DBService = {
         return true;
       } catch (err) {
         console.warn('Firestore unlockAttendance error:', err);
+        throw err;
       }
     }
 

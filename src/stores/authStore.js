@@ -1,150 +1,76 @@
 import { defineStore } from 'pinia';
 import { DBService, formatTeacherName } from '../api/storage';
-import { auth, signInWithEmailAndPassword, signOut } from '../api/firebase';
+import { auth, authReady, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from '../api/firebase';
 
-const SESSION_KEY = 'bujeon_user_session';
+export function authErrorMessage(error) {
+  if (error.code === 'permission-denied') return '데이터 접근 권한이 없습니다. 관리자 계정 등록과 Firestore 규칙을 확인해주세요.';
+  const messages = {
+    'auth/operation-not-allowed': 'Firebase Authentication에서 이메일/비밀번호 로그인을 활성화해주세요.',
+    'auth/invalid-credential': '이메일 또는 비밀번호가 일치하지 않습니다.',
+    'auth/invalid-email': '올바른 이메일 주소를 입력해주세요.',
+    'auth/email-already-in-use': '이미 등록된 이메일입니다. Firebase 콘솔의 사용자와 앱 등록 상태를 확인해주세요.',
+    'auth/weak-password': '초기 비밀번호는 6자 이상으로 입력해주세요.',
+    'auth/password-does-not-meet-requirements': 'Firebase 비밀번호 정책에 맞는 비밀번호를 입력해주세요.',
+    'auth/network-request-failed': '네트워크 연결을 확인해주세요.',
+    'auth/too-many-requests': '요청이 많습니다. 잠시 후 다시 시도해주세요.'
+  };
+  return messages[error.code] || error.message || '요청을 처리하지 못했습니다.';
+}
 
 export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    user: null,
-    loading: true,
-    error: null,
-  }),
-
+  state: () => ({ user: null, loading: true, error: null }),
   getters: {
-    isAuthenticated: (state) => !!state.user,
-    isAdmin: (state) => state.user?.role === 'admin',
-    isTeacher: (state) => state.user?.role === 'teacher',
-    userName: (state) => {
-      if (!state.user) return '';
-      return formatTeacherName(state.user.name, state.user.position, state.user.role);
-    },
-    userGroup: (state) => state.user?.groupName || '',
-    userGroupId: (state) => state.user?.groupId || '',
-    userDepartmentId: (state) => state.user?.departmentId || '',
+    isAuthenticated: state => !!state.user,
+    isAdmin: state => state.user?.role === 'admin',
+    isTeacher: state => state.user?.role === 'teacher',
+    userName: state => state.user ? formatTeacherName(state.user.name, state.user.position, state.user.role) : '',
+    userGroup: state => state.user?.groupName || '',
+    userGroupId: state => state.user?.groupId || '',
+    userDepartmentId: state => state.user?.departmentId || ''
   },
-
   actions: {
-    // 1. Initialize session from persistent storage
+    async loadProfile() {
+      if (!auth.currentUser) { this.user = null; return null; }
+      const profile = await DBService.getOne('users', auth.currentUser.uid);
+      if (!profile || !['admin', 'teacher'].includes(profile.role)) {
+        throw new Error('등록된 교직원 정보가 없습니다. 관리자에게 계정 등록을 요청해주세요.');
+      }
+      this.user = { ...profile, id: auth.currentUser.uid };
+      return this.user;
+    },
     async initAuth() {
       this.loading = true;
+      localStorage.removeItem('bujeon_user_session');
       try {
-        const savedSession = localStorage.getItem(SESSION_KEY);
-        if (savedSession) {
-          const parsed = JSON.parse(savedSession);
-          const users = await DBService.getAll('users');
-          const found = users.find(u => u.id === parsed.id || u.username === parsed.username || u.email === parsed.email);
-          if (found) {
-            this.user = {
-              ...found,
-              name: formatTeacherName(found.name, found.position, found.role)
-            };
-          } else {
-            this.user = parsed;
-          }
-        }
-      } catch (err) {
-        console.error('Session init error:', err);
-        localStorage.removeItem(SESSION_KEY);
+        await authReady;
+        await this.loadProfile();
+      } catch (error) {
         this.user = null;
-      } finally {
-        this.loading = false;
-      }
+        this.error = authErrorMessage(error);
+        await signOut(auth).catch(() => {});
+      } finally { this.loading = false; }
     },
-
-    // 2. ID / Code / Email & Password Login
     async login(identifier, password) {
       this.loading = true;
       this.error = null;
       try {
-        const cleanId = String(identifier).trim().toLowerCase();
-        const users = await DBService.getAll('users');
-
-        // Match by username (e.g. 11, 12, 114, 21, pastor, clerk) OR email
-        const matched = users.find(u => {
-          const uUsername = String(u.username || '').toLowerCase();
-          const uEmail = String(u.email || '').toLowerCase();
-          return uUsername === cleanId || uEmail === cleanId;
-        });
-
-        if (matched) {
-          // Check Password
-          const correctPassword = matched.password || (matched.role === 'admin' ? 'admin1234' : '1234');
-          if (password === correctPassword || password === 'admin1234' || (matched.role === 'teacher' && password === '1234')) {
-            const formattedProfile = {
-              ...matched,
-              name: formatTeacherName(matched.name, matched.position, matched.role)
-            };
-            this.setSession(formattedProfile);
-            return formattedProfile;
-          } else {
-            throw new Error('비밀번호가 일치하지 않습니다.');
-          }
-        }
-
-        // Cloud Firebase Auth Fallback (if using valid email)
-        if (DBService.isUsingCloud() && auth && cleanId.includes('@')) {
-          try {
-            const userCredential = await signInWithEmailAndPassword(auth, cleanId, password);
-            const fbUser = userCredential.user;
-            const profile = {
-              id: fbUser.uid,
-              username: cleanId.split('@')[0],
-              email: fbUser.email,
-              name: formatTeacherName(fbUser.displayName || '선생님'),
-              role: 'teacher'
-            };
-            this.setSession(profile);
-            return profile;
-          } catch (fbErr) {
-            console.warn('Firebase login failed:', fbErr);
-          }
-        }
-
-        throw new Error('등록되지 않은 아이디이거나 비밀번호가 일치하지 않습니다.');
-      } catch (err) {
-        this.error = err.message || '로그인에 실패하였습니다.';
-        throw err;
-      } finally {
-        this.loading = false;
-      }
+        await authReady;
+        await signInWithEmailAndPassword(auth, identifier.trim(), password);
+        return await this.loadProfile();
+      } catch (error) {
+        this.user = null;
+        await signOut(auth).catch(() => {});
+        this.error = authErrorMessage(error);
+        throw new Error(this.error);
+      } finally { this.loading = false; }
     },
-
-    // 3. Quick Demo Login
-    async demoLogin(presetUser) {
-      const formatted = {
-        ...presetUser,
-        name: formatTeacherName(presetUser.name, presetUser.position, presetUser.role)
-      };
-      this.setSession(formatted);
-      return formatted;
+    async resetPassword(email) {
+      await sendPasswordResetEmail(auth, email.trim());
     },
-
-    // 4. Save session to LocalStorage
-    setSession(userData) {
-      this.user = userData;
-      localStorage.setItem(SESSION_KEY, JSON.stringify(userData));
-    },
-
-    // 5. Logout
     async logout() {
-      if (DBService.isUsingCloud() && auth) {
-        try {
-          await signOut(auth);
-        } catch (e) {
-          console.warn('Firebase signout error:', e);
-        }
-      }
+      await signOut(auth);
       this.user = null;
-      localStorage.removeItem(SESSION_KEY);
-    },
-
-    // 6. Update Profile
-    updateUser(updates) {
-      if (this.user) {
-        this.user = { ...this.user, ...updates };
-        localStorage.setItem(SESSION_KEY, JSON.stringify(this.user));
-      }
+      localStorage.removeItem('bujeon_user_session');
     }
   }
 });

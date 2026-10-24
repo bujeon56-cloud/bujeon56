@@ -102,7 +102,9 @@ export const useAttendanceStore = defineStore('attendance', {
         }, 2000);
       } catch (err) {
         console.error('Auto save error:', err);
+        this.records = { ...this.records, [studentId]: { ...currentStudentChecks, [checkItemId]: !newValue } };
         this.saveStatus = 'error';
+        throw err;
       }
     },
 

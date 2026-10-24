@@ -469,6 +469,7 @@ const loadData = async () => {
   if (!church.initialized) {
     await church.initChurchData();
   }
+  if (!currentGroupId.value) { attendanceStore.records = {}; attendanceStore.submission = null; return; }
   await attendanceStore.loadGroupAttendance(church.currentYear, currentGroupId.value);
   if (attendanceStore.submission?.notes) {
     submissionNotes.value = attendanceStore.submission.notes;

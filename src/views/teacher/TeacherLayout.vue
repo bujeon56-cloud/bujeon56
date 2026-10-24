@@ -90,11 +90,7 @@ const auth = useAuthStore();
 const church = useChurchStore();
 
 const currentGroupName = computed(() => {
-  if (auth.user?.groupName) return auth.user.groupName;
-  if (auth.user?.groupId) {
-    const g = church.getGroupById(auth.user.groupId);
-    if (g) return `${g.departmentName} ${g.name}`;
-  }
-  return '담당 목장';
+  const group = church.getTeacherGroup(auth.user?.id);
+  return group ? [group.departmentName, group.name].join(' ') : '반 미배정';
 });
 </script>

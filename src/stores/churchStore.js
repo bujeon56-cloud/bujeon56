@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia';
 import { DBService } from '../api/storage';
+import { auth, createStaffAccount } from '../api/firebase';
+import { useAuthStore } from './authStore';
 
 export const useChurchStore = defineStore('church', {
   state: () => ({
@@ -51,14 +53,30 @@ export const useChurchStore = defineStore('church', {
     async initChurchData() {
       this.loading = true;
       try {
-        const [years, groups, checkItems, students, users] = await Promise.all([
+        const account = useAuthStore();
+        if (!account.user) { this.$reset(); return; }
+        const groupFilters = account.isAdmin ? [] : [{ field: 'teacherId', op: '==', value: account.user.id }];
+        const groups = await DBService.getAll('groups', groupFilters);
+        const studentPromise = account.isAdmin ? DBService.getAll('students') :
+          Promise.all(groups.map(g => DBService.getAll('students', [{ field: 'groupId', op: '==', value: g.id }]))).then(lists => lists.flat());
+        const [years, checkItems, students, users] = await Promise.all([
           DBService.getAll('years'),
-          DBService.getAll('groups'),
           DBService.getAll('checkItems'),
-          DBService.getAll('students'),
-          DBService.getAll('users')
+          studentPromise,
+          account.isAdmin ? DBService.getAll('users') : Promise.resolve([account.user])
         ]);
 
+        if (account.isAdmin && !years.length) {
+          const year = new Date().getFullYear().toString();
+          const firstYear = { id: year, title: year + '년도', isCurrent: true };
+          await DBService.set('years', year, firstYear);
+          years.push(firstYear);
+        }
+        if (account.isAdmin && !checkItems.length) {
+          const item = { id: 'attendance', label: '출석', points: 2, enabled: true, isDefault: true, color: 'emerald' };
+          await DBService.set('checkItems', item.id, item);
+          checkItems.push(item);
+        }
         this.years = years.length > 0 ? years : [{ id: this.currentYear, title: `${this.currentYear}년도`, isCurrent: true }];
         
         // Find current year
@@ -73,7 +91,8 @@ export const useChurchStore = defineStore('church', {
         this.teachers = users;
         this.initialized = true;
       } catch (err) {
-        console.error('Failed to init church data:', err);
+        this.initialized = false;
+        throw err;
       } finally {
         this.loading = false;
       }
@@ -201,27 +220,24 @@ export const useChurchStore = defineStore('church', {
 
     // --- Teacher Management ---
     async addTeacher(teacherData) {
-      const id = `t_${Date.now()}`;
-      const newTeacher = {
-        id,
-        ...teacherData,
-        role: teacherData.role || 'teacher',
-        createdAt: new Date().toISOString()
-      };
-      await DBService.set('users', id, newTeacher);
+      const { password, ...profile } = teacherData;
+      if (!profile.email || !password || password.length < 6) throw new Error('이메일과 6자 이상의 비밀번호가 필요합니다.');
+      let newTeacher;
+      await createStaffAccount(profile.email.trim(), password, async id => {
+        newTeacher = { ...profile, id, role: profile.role || 'teacher', createdAt: new Date().toISOString() };
+        await DBService.set('users', id, newTeacher);
+      });
       this.teachers.push(newTeacher);
-
-      // If assigned to a group, update group
-      if (newTeacher.groupId) {
-        await this.updateGroup(newTeacher.groupId, {
-          teacherId: id,
-          teacherName: newTeacher.name
-        });
-      }
+      if (newTeacher.groupId) await this.updateGroup(newTeacher.groupId, { teacherId: newTeacher.id, teacherName: newTeacher.name });
       return newTeacher;
     },
 
     async updateTeacher(id, updates) {
+      const { password, ...safeUpdates } = updates;
+      const previous = this.teachers.find(t => t.id === id);
+      if (id === auth.currentUser?.uid && safeUpdates.role && safeUpdates.role !== previous?.role) throw new Error('현재 로그인한 관리자 역할은 변경할 수 없습니다.');
+      if (safeUpdates.email && previous?.email !== safeUpdates.email) throw new Error('이메일 변경은 Firebase Authentication 콘솔에서 처리해주세요.');
+      updates = safeUpdates;
       await DBService.set('users', id, updates);
       const idx = this.teachers.findIndex(t => t.id === id);
       if (idx >= 0) {
@@ -242,13 +258,10 @@ export const useChurchStore = defineStore('church', {
     },
 
     async deleteTeacher(id) {
-      const teacher = this.teachers.find(t => t.id === id);
-      if (teacher && teacher.groupId) {
-        await this.updateGroup(teacher.groupId, {
-          teacherId: null,
-          teacherName: '미배정'
-        });
-      }
+      if (id === auth.currentUser?.uid) throw new Error('현재 로그인한 관리자 계정은 삭제할 수 없습니다.');
+      // Keep historical teacher names on old groups; remove current-year assignment only.
+      const group = this.getTeacherGroup(id);
+      if (group) await this.updateGroup(group.id, { teacherId: null, teacherName: '미배정' });
       await DBService.delete('users', id);
       this.teachers = this.teachers.filter(t => t.id !== id);
     },
