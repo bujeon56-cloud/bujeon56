@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#grad)" />
+  <g fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Church Cross & Book Symbol -->
+    <path d="M96 36v60" />
+    <path d="M72 56h48" />
+    <!-- Attendance Checklist Outline -->
+    <path d="M52 110h88c6.6 0 12 5.4 12 12v24c0 6.6-5.4 12-12 12H52c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12z" fill="#ffffff" fill-opacity="0.15" />
+    <path d="M64 128l12 12 24-24" stroke="#fbbf24" stroke-width="8" />
+    <path d="M110 134h26" stroke="#ffffff" stroke-width="8" />
+  </g>
+</svg>

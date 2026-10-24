@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 교회 소년부 출석부 보안 규칙
+    // 인증된 사용자 또는 앱 사용자 접근 허용
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

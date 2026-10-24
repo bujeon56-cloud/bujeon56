@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    word-break: keep-all;
+  }
+  
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased min-h-screen select-none;
+    touch-action: manipulation;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  input, textarea, select {
+    @apply select-text;
+    font-size: 16px; /* Prevents auto-zoom on iOS Safari when focusing inputs */
+  }
+}
+
+/* Touch Friendly Utilities */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animations */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Safe area padding helper */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
+}

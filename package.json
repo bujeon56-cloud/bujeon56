@@ -1,0 +1,28 @@
+{
+  "name": "bujeon",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "autoprefixer": "^10.6.1",
+    "canvas-confetti": "^1.9.4",
+    "firebase": "^13.1.0",
+    "lucide-vue-next": "^1.0.0",
+    "pinia": "^4.1.0",
+    "postcss": "^8.5.31",
+    "tailwindcss": "^3.4.17",
+    "vite-plugin-pwa": "^2.0.0",
+    "vue": "^3.5.44",
+    "vue-router": "^4.6.4",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.10",
+    "vite": "^8.3.4"
+  }
+}
