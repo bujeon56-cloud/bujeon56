@@ -1,15 +1,10 @@
 import { defineStore } from 'pinia';
+import { recentSunday } from '../utils/sundays.js';
 import { DBService } from '../api/storage';
 import { useChurchStore } from './churchStore';
 
 // Helper: Get Nearest Sunday date string (YYYY-MM-DD)
-export function getRecentSunday(date = new Date()) {
-  const d = new Date(date);
-  const day = d.getDay(); // 0 is Sunday
-  const diff = d.getDate() - day; // adjust when day is not Sunday
-  const sunday = new Date(d.setDate(diff));
-  return sunday.toISOString().split('T')[0];
-}
+export function getRecentSunday(date = new Date()) { return recentSunday(date); }
 
 export const useAttendanceStore = defineStore('attendance', {
   state: () => ({

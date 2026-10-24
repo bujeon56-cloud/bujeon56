@@ -40,7 +40,7 @@ test('cloud reset commits the whole target group once and leaves other groups un
 test('reset action preserves locked records, failed writes and a newly selected group',async t=>{
  t.mock.timers.enable({apis:['setTimeout']});
  let source=await readFile('src/stores/attendanceStore.js','utf8');
- source=source.replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`).replace(/import \{ DBService[^\n]+\n/, 'const DBService=globalThis.__resetAction;\n').replace(/import \{ useChurchStore[^\n]+\n/, "const useChurchStore=()=>({checkItems:[{id:'attendance'},{id:'prayer'}]});\n");
+ source=source.replace("from '../utils/sundays.js'",`from '${import.meta.resolve('../src/utils/sundays.js')}'`).replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`).replace(/import \{ DBService[^\n]+\n/, 'const DBService=globalThis.__resetAction;\n').replace(/import \{ useChurchStore[^\n]+\n/, "const useChurchStore=()=>({checkItems:[{id:'attendance'},{id:'prayer'}]});\n");
  let calls=0;
  const cleared={s:{attendance:false,prayer:false}};
  globalThis.__resetAction={resetGroupAttendance:async()=>{calls++;return cleared;}};
