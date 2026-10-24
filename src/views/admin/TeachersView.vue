@@ -23,9 +23,7 @@
       </button>
     </div>
 
-    <!-- 목장별 로그인 계정 안내는 숨김: 일괄 등록은 설정에서 진행합니다.
     <ClassAccountsSetup />
-    -->
 
     <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-xl border">
       <p class="text-sm">{{ church.currentYear }}년 명단 · {{ selectedIds.length }}명 선택 <span class="text-xs text-slate-500">담당 목장 오름차순 · 미배정은 마지막에 표시</span></p>
@@ -301,6 +299,7 @@ import { ref, computed, watch } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
 import { formatTeacherName, DBService } from '../../api/storage';
 import Modal from '../../components/Modal.vue';
+import ClassAccountsSetup from '../../components/ClassAccountsSetup.vue';
 import { UserPlus, Shield, CheckSquare, Edit2, Trash2, Key } from 'lucide-vue-next';
 
 const church = useChurchStore();

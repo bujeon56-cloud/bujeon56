@@ -1,11 +1,10 @@
-import { DBService } from './storage';
 import { auth, db, doc, writeBatch, createStaffAccount } from './firebase';
 
 export function classProvisioner(groups, users) {
   return {
     async provision(row) {
-      const group = groups.find(g => g.year === row.year && g.departmentId === row.departmentId && g.name === row.name)
-        || groups.find(g => g.year === row.year && g.departmentId === row.departmentId && g.order === row.order);
+      const group = groups.find(g => g.id === row.id && String(g.year) === row.year);
+      if (!group) throw new Error('목장 정보가 변경되었습니다. 창을 닫고 다시 준비해주세요.');
       if (group?.teacherId) {
         const existing = users.find(user => user.id === group.teacherId);
         if (!existing) throw new Error(`${row.departmentName} ${row.name}: 배정된 교사 정보를 확인해주세요.`);
@@ -15,8 +14,13 @@ export function classProvisioner(groups, users) {
       if (existingAccount) {
         if (existingAccount.role !== 'teacher') throw new Error('같은 아이디의 관리자 계정이 있어 생성하지 않았습니다.');
         if (!group) throw new Error('기존 계정의 반 정보가 없습니다. 관리자 화면에서 확인해주세요.');
-        await DBService.set('groups', group.id, {teacherId: existingAccount.id, teacherName: existingAccount.name});
-        group.teacherId = existingAccount.id;
+        const removedYears=(existingAccount.removedYears || []).filter(year=>String(year)!==row.year);
+        const batch=writeBatch(db);
+        batch.set(doc(db,'users',existingAccount.id),{removedYears},{merge:true});
+        batch.set(doc(db,'groups',group.id),{teacherId:existingAccount.id,teacherName:existingAccount.name},{merge:true});
+        await batch.commit();
+        Object.assign(group,{teacherId:existingAccount.id,teacherName:existingAccount.name});
+        existingAccount.removedYears=removedYears;
         return 'existing';
       }
       const groupId = group?.id || row.id;

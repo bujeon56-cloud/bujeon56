@@ -1,6 +1,30 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {classes2026,classLoginEmail,initialPassword,credentialCsv,provisionClasses,parseTeacherRoster} from '../src/utils/classAccounts.js';
+import {classes2026,classesForYear,classLoginEmail,initialPassword,credentialCsv,provisionClasses,parseTeacherRoster} from '../src/utils/classAccounts.js';
+
+test('year preparation uses only that year and its actual classes in numeric order',()=>{
+ const groups=[{id:'old',year:'2026',departmentId:'part1',name:'1목장',order:1},
+  {id:'b',year:'2027',departmentId:'part2',name:'3목장',order:1},
+  {id:'a',year:'2027',departmentId:'part1',name:'10목장',order:1},
+  {id:'c',year:'2027',departmentId:'part1',name:'2목장',order:99}];
+ const rows=classesForYear(groups,'2027');
+ assert.deepEqual(rows.map(r=>r.code),['270102','270110','270203']);
+ assert.deepEqual(rows.map(r=>r.id),['c','a','b']);
+ assert.equal(classLoginEmail('20270110'),rows[1].email);
+ assert.equal(initialPassword(rows[0].code),'270102');
+ assert.equal(parseTeacherRoster('2,3,새 선생님',rows).get('270203'),'새 선생님');
+ assert.throws(()=>parseTeacherRoster('1,1,없는 목장',rows));
+ assert.deepEqual(classesForYear(groups,'2028'),[]);
+ assert.ok(credentialCsv(rows).includes('"2027"'));
+ assert.equal(groups[0].year,'2026');
+});
+
+test('duplicate or unsupported class numbers cannot create colliding yearly accounts',()=>{
+ const group={id:'a',year:'2027',departmentId:'part1',name:'1목장',order:1};
+ assert.throws(()=>classesForYear([group,{...group,id:'b'}],'2027'),/중복/);
+ assert.throws(()=>classesForYear([{...group,name:'100목장'}],'2027'));
+ assert.throws(()=>classesForYear([{...group,departmentId:'other'}],'2027'));
+});
 test('2026 accounts use the requested 260101, 260114, 260201 through 260208 format',()=>{
  const rows=classes2026();assert.equal(rows.length,22);assert.equal(new Set(rows.map(r=>r.code)).size,22);
  assert.equal(rows.filter(r=>r.departmentId==='part1').length,14);assert.equal(rows.filter(r=>r.departmentId==='part2').length,8);

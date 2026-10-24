@@ -1,3 +1,5 @@
+import {compareGroups} from './groupOrder.js';
+
 export function classLoginEmail(identifier) {
   let value = String(identifier).normalize('NFKC').replace(/[\u200B-\u200D\uFEFF]/g, '').trim().toLowerCase();
   if (value === 'bujeon56') return 'bujeon56@accounts.bujeon56.invalid';
@@ -14,19 +16,35 @@ export function classes2026() {
   }));
 }
 
+export function classesForYear(groups, year) {
+  year=String(year);
+  if (!/^20\d{2}$/.test(year)) throw new Error('연도를 확인해주세요.');
+  const codes=new Set();
+  return groups.filter(group=>String(group.year)===year).sort(compareGroups).map(group=>{
+    const part={part1:'01',part2:'02'}[group.departmentId];
+    const number=String(group.name || '').match(/(\d+)\s*목장/);
+    const order=number ? Number(number[1]) : Number(group.order);
+    if(!part || !Number.isInteger(order) || order<1 || order>99) throw new Error('목장 부서와 번호(1~99)를 확인해주세요: '+group.name);
+    const code=year.slice(2)+part+String(order).padStart(2,'0');
+    if(codes.has(code))throw new Error('같은 부서에 목장 번호가 중복되어 있습니다: '+group.name);
+    codes.add(code);
+    return {...group,year,order,code,email:classLoginEmail(code)};
+  });
+}
+
 export function initialPassword(code) {
   if (!/^\d{6}$/.test(code)) throw new Error('목장 아이디는 6자리여야 합니다.');
   return code;
 }
 
-export function parseTeacherRoster(text) {
+export function parseTeacherRoster(text, rows = classes2026()) {
   const result = new Map();
   for (const [index, line] of text.split(/\r?\n/).entries()) {
     if (!line.trim()) continue;
     const columns = line.split(',').map(value => value.trim());
     const [part, order, name] = columns;
     if (columns.length !== 3 || !['1', '2'].includes(part) || !/^[1-9]\d?$/.test(order || '') || !name) throw new Error((index + 1) + '행: 부서,목장번호,선생님 형식으로 입력해주세요.');
-    const row = classes2026().find(row => row.departmentId === 'part' + part && row.order === Number(order));
+    const row = rows.find(row => row.departmentId === 'part' + part && row.order === Number(order));
     if (!row || result.has(row.code)) throw new Error((index + 1) + '행: 없는 목장이거나 중복된 목장입니다.');
     result.set(row.code, name);
   }
