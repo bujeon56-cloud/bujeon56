@@ -4,6 +4,30 @@ import {readFile} from 'node:fs/promises';
 import {ref,computed,watch,reactive,nextTick} from 'vue';
 import * as fields from '../src/utils/studentFields.js';
 
+test('deleted talents stay excluded in every month even if a student is reactivated',async()=>{
+ const source=await readFile('src/stores/attendanceStore.js','utf8');
+ const body=source.match(/async calculateMonthlyTalents\(year, monthStr\) \{([\s\S]*?)\n    \}/)[1];
+ const records={removed:{attendance:true,prayer:true},kept:{attendance:true,prayer:true}};
+ const data=[{year:'2026',date:'2026-10-25',records},{year:'2026',date:'2026-11-01',records},{year:'2025',date:'2025-10-26',records}];
+ const church={students:[{id:'removed',active:true,talentsDeleted:true},{id:'kept',active:true}],checkItems:[{id:'attendance',points:2},{id:'prayer',points:5}]};
+ const calculate=new Function('useChurchStore','DBService',`return async function(year,monthStr){${body}}`)(()=>church,{getAll:async()=>data});
+ for(const month of ['2026-10','2026-11']){
+  const totals=await calculate('2026',month);assert.equal(totals.removed,undefined);assert.equal(totals.kept.points,7);assert.equal(totals.kept.attendanceCount,1);
+ }
+ assert.equal(records.removed.attendance,true);assert.equal(records.kept.prayer,true);
+});
+
+test('student and talent removal requires an admin and the selected year',async()=>{
+ const source=await readFile('src/stores/churchStore.js','utf8');
+ const body=source.match(/async removeStudentWithTalents\(id\) \{([\s\S]*?)\n    \}/)[1];
+ const permission={isAdmin:true},calls=[];
+ const remove=new Function('useAuthStore',`return async function(id){${body}}`)(()=>permission);
+ const state={currentYear:'2026',students:[{id:'new',year:'2026'},{id:'old',year:'2025'}],updateStudent:async(...args)=>calls.push(args)};
+ await assert.rejects(remove.call(state,'old'));await assert.rejects(remove.call(state,'missing'));
+ permission.isAdmin=false;await assert.rejects(remove.call(state,'new'));assert.equal(calls.length,0);
+ permission.isAdmin=true;await remove.call(state,'new');assert.deepEqual(calls,[['new',{active:false,talentsDeleted:true}]]);
+});
+
 test('admin group student management scopes changes, preserves history and ignores stale completion',async()=>{
  const source=await readFile('src/components/GroupStudentsManager.vue','utf8');
  const script=source.match(/<script setup>([\s\S]*?)<\/script>/)[1].replace(/^import .*;\r?\n/gm,'');
@@ -14,6 +38,7 @@ test('admin group student management scopes changes, preserves history and ignor
   get currentGroups(){return this.groups.filter(group=>group.year===this.currentYear);},
   getStudentsByGroup(id){return this.students.filter(student=>student.groupId===id && student.year===this.currentYear && student.active!==false);},
   async updateStudent(id,payload){if(fail)throw new Error('네트워크 오류');Object.assign(this.students.find(student=>student.id===id),fields.normalizeStudentFields(payload));},
+  async removeStudentWithTalents(id){await this.updateStudent(id,{active:false,talentsDeleted:true});},
   async addStudent(payload){await new Promise(resolve=>{finish=resolve;});this.students.push({...payload,id:'new',year:'2026',active:true});}
  });
  const names=['ref','computed','watch','defineProps','defineEmits','useChurchStore','useAuthStore','authErrorMessage','confirm',...Object.keys(fields)];
@@ -25,7 +50,7 @@ test('admin group student management scopes changes, preserves history and ignor
  assert.equal(church.students[1].name,'다른 반');assert.equal(church.students[2].name,'이전 연도');
  ui.openForm(church.students[0]);fail=true;ui.form.value.name='저장 실패';await ui.save();
  assert.equal(ui.editing.value,true);assert.equal(ui.error.value,'네트워크 오류');assert.equal(church.students[0].name,'수정 학생');fail=false;
- await ui.remove(church.students[0]);assert.equal(church.students[0].active,false);assert.equal(church.students[0].notes,'기존 메모');assert.equal(ui.students.value.length,0);
+ await ui.remove(church.students[0]);assert.equal(church.students[0].active,false);assert.equal(church.students[0].talentsDeleted,true);assert.equal(church.students[0].notes,'기존 메모');assert.equal(ui.students.value.length,0);
  ui.openForm();ui.form.value.name='새 학생';const pending=ui.save();
  church.currentYear='2027';await nextTick();finish();await pending;
  assert.equal(ui.notice.value,'');assert.equal(ui.students.value.length,0);assert.equal(ui.busy.value,false);

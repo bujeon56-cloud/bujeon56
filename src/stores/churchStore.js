@@ -326,6 +326,13 @@ export const useChurchStore = defineStore('church', {
     async deleteStudent(id) {
       await DBService.delete('students', id);
       this.students = this.students.filter(s => s.id !== id);
+    },
+    async removeStudentWithTalents(id) {
+      if (!useAuthStore().isAdmin) throw new Error('관리자만 학생과 달란트를 삭제할 수 있습니다.');
+      const student = this.students.find(s => s.id === id && s.year === this.currentYear);
+      if (!student) throw new Error('선택한 연도의 학생을 찾을 수 없습니다.');
+      // Keep attendance history while permanently cancelling the student's earned talents.
+      await this.updateStudent(id, {active:false, talentsDeleted:true});
     }
   }
 });

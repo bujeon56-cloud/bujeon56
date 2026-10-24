@@ -83,12 +83,12 @@ async function save(){
 }
 async function remove(student){
   if(busy.value || !group.value || !auth.isAdmin || !students.value.some(row=>row.id===student.id))return;
-  if(!confirm(student.name+' 학생을 이 반 명단에서 삭제하시겠습니까? 기존 출석·달란트 기록은 보존됩니다.'))return;
+  if(!confirm(student.name+' 학생과 기존 달란트 내역을 삭제하시겠습니까? 모든 월의 기존 달란트가 합계에서 제거됩니다. 출석 기록은 보존됩니다.'))return;
   const groupId=props.groupId,year=church.currentYear;
   busy.value=true;error.value='';notice.value='';
   try{
-    await church.updateStudent(student.id,{active:false});
-    if(props.groupId===groupId && church.currentYear===year)notice.value='학생을 명단에서 삭제했습니다. 기존 기록은 보존했습니다.';
+    await church.removeStudentWithTalents(student.id);
+    if(props.groupId===groupId && church.currentYear===year)notice.value='학생과 기존 달란트 내역을 삭제했습니다.';
   }catch(err){if(props.groupId===groupId && church.currentYear===year)error.value=authErrorMessage(err);}
   finally{busy.value=false;}
 }

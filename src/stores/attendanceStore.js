@@ -191,6 +191,7 @@ export const useAttendanceStore = defineStore('attendance', {
       const churchStore = useChurchStore();
       const allAttendances = (await DBService.getAll('attendances')) || [];
       const checkItems = churchStore.checkItems;
+      const excludedStudentIds = new Set(churchStore.students.filter(student => student.talentsDeleted === true).map(student => student.id));
 
       // Filter attendance entries for the target month
       const monthRecords = allAttendances.filter(entry => {
@@ -203,6 +204,7 @@ export const useAttendanceStore = defineStore('attendance', {
       monthRecords.forEach(dayEntry => {
         const records = dayEntry.records || {};
         Object.entries(records).forEach(([studentId, checks]) => {
+          if (excludedStudentIds.has(studentId)) return;
           if (!studentPoints[studentId]) {
             studentPoints[studentId] = {
               points: 0,
