@@ -11,7 +11,7 @@
             월별 목장 및 학생 달란트 합계
           </h3>
           <p class="text-xs text-slate-400">
-            목장별로 펼치기/접기하여 각 반 아이들의 달란트 세부 내역을 확인하세요.
+            목장별로 펼치기/접기하여 각 반 학생의 달란트 세부 내역을 확인하세요.
           </p>
         </div>
       </div>
@@ -86,13 +86,13 @@
       </div>
     </div>
 
-    <!-- Group-by-Group Accordion Table (Requested: 각 목장별로 펼치기/줄이기 기능으로 아이들 달란트 확인) -->
+    <!-- Group-by-Group Accordion Table (Requested: 각 목장별로 펼치기/줄이기 기능으로 학생 달란트 확인) -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <!-- Table Header & Accordion Toggle All Buttons -->
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div class="flex items-center gap-2">
           <h4 class="font-black text-sm sm:text-base text-slate-800">
-            목장별 달란트 목록 및 아이별 상세 내역
+            목장별 달란트 목록 및 학생별 상세 내역
           </h4>
           <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700">
             총 {{ church.currentGroups.length }}개 목장
@@ -156,7 +156,7 @@
                   </span>
                 </div>
                 <div class="text-xs text-slate-400 mt-0.5">
-                  소속 아이: <strong class="text-slate-700">{{ g.studentCount }}명</strong>
+                  소속 학생: <strong class="text-slate-700">{{ g.studentCount }}명</strong>
                 </div>
               </div>
             </div>
@@ -173,7 +173,7 @@
 
               <div class="hidden sm:block">
                 <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
-                  {{ isGroupExpanded(g.id) ? '접기 ▲' : '아이들 보기 ▼' }}
+                  {{ isGroupExpanded(g.id) ? '접기 ▲' : '학생 보기 ▼' }}
                 </span>
               </div>
             </div>
@@ -186,7 +186,7 @@
           >
             <!-- Empty state for group with no students -->
             <div v-if="getStudentsInGroup(g.id).length === 0" class="py-6 text-center text-xs text-slate-400">
-              등록된 아이가 없습니다.
+              등록된 학생이 없습니다.
             </div>
 
             <!-- Students Talent Sub-table -->
@@ -196,7 +196,7 @@
                   <thead>
                     <tr class="bg-slate-100/80 text-[11px] text-slate-600 font-bold border-b border-slate-200">
                       <th class="py-2.5 px-3 text-center w-12">No</th>
-                      <th class="py-2.5 px-4 min-w-[100px]">아이 이름</th>
+                      <th class="py-2.5 px-4 min-w-[100px]">학생 이름</th>
                       <th class="py-2.5 px-3">학년</th>
                       <th class="py-2.5 px-3 text-center">출석 횟수</th>
                       <th class="py-2.5 px-3 text-center">성경읽기 횟수</th>
@@ -379,7 +379,7 @@ const exportToExcel = () => {
   try {
     const studentData = allStudentStats.value.map((s, idx) => ({
       '순번': idx + 1,
-      '아이 이름': s.name,
+      '학생 이름': s.name,
       '학년': s.grade,
       '소속 목장': s.groupName,
       '출석 횟수': s.attendanceCount,
@@ -392,9 +392,9 @@ const exportToExcel = () => {
       '부서': g.departmentName,
       '목장': g.name,
       '담당 선생님': getFormattedTeacherName(g.teacherName),
-      '아이 수': g.studentCount,
+      '학생 수': g.studentCount,
       '목장 총 달란트': g.totalPoints,
-      '아이 1인당 평균': g.avgPoints
+      '학생 1인당 평균': g.avgPoints
     }));
 
     const wb = XLSX.utils.book_new();
@@ -402,7 +402,7 @@ const exportToExcel = () => {
     const wsStudents = XLSX.utils.json_to_sheet(studentData);
 
     XLSX.utils.book_append_sheet(wb, wsGroups, '목장별 달란트');
-    XLSX.utils.book_append_sheet(wb, wsStudents, '아이별 달란트 세부');
+    XLSX.utils.book_append_sheet(wb, wsStudents, '학생별 달란트 세부');
 
     const fileName = `소년부_${selectedMonth.value}_달란트합계.xlsx`;
     XLSX.writeFile(wb, fileName);

@@ -137,7 +137,7 @@
         class="flex-1 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-800 border border-emerald-200 rounded-xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-1.5 shadow-xs"
       >
         <CheckCircle2 class="w-4 h-4 text-emerald-600" />
-        <span>아이들 전원 출석 체크</span>
+        <span>학생 전원 출석 체크</span>
       </button>
 
       <button 
@@ -154,16 +154,16 @@
       <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-3">
         <Users class="w-8 h-8" />
       </div>
-      <h4 class="font-extrabold text-slate-800 text-base sm:text-lg">등록된 아이가 없습니다</h4>
+      <h4 class="font-extrabold text-slate-800 text-base sm:text-lg">등록된 학생이 없습니다</h4>
       <p class="text-xs sm:text-sm text-slate-500 mt-1 mb-5">
-        우리 반 아이들을 먼저 등록해주세요.<br/>선생님이 직접 등록할 수 있습니다.
+        우리 반 학생을 먼저 등록해주세요.<br/>선생님이 직접 등록할 수 있습니다.
       </p>
       <router-link 
         to="/teacher/students" 
         class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-indigo-100 active:scale-95 transition"
       >
         <UserPlus class="w-5 h-5" />
-        <span>우리 반 아이 등록하기</span>
+        <span>우리 반 학생 등록하기</span>
       </router-link>
     </div>
 
@@ -328,7 +328,7 @@
           v-model="submissionNotes" 
           rows="2" 
           :disabled="attendanceStore.isReadOnly"
-          placeholder="아이들의 기도제목이나 심방 필요사항을 적어주시면 목사님과 서기 선생님이 확인합니다."
+          placeholder="학생의 기도제목이나 심방 필요사항을 적어주시면 목사님과 서기 선생님이 확인합니다."
           class="w-full p-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 focus:bg-white transition disabled:bg-slate-100 disabled:text-slate-500"
         ></textarea>
       </div>

@@ -33,7 +33,7 @@
             :class="$route.path.includes('students') ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
           >
             <Users class="w-4 h-4" />
-            <span>아이들 관리</span>
+            <span>학생 관리</span>
           </router-link>
         </div>
       </div>
@@ -72,7 +72,7 @@
           >
             <Users class="w-5 h-5" />
           </div>
-          <span class="text-xs">아이들 관리</span>
+          <span class="text-xs">학생 관리</span>
         </router-link>
       </div>
     </nav>

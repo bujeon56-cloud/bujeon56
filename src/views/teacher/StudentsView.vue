@@ -4,12 +4,12 @@
     <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3">
       <div>
         <h3 class="font-black text-base sm:text-lg text-slate-900 flex items-center gap-2">
-          <span>우리 반 아이들</span>
+          <span>우리 반 학생</span>
           <span class="px-2.5 py-0.5 text-xs font-black bg-indigo-50 text-indigo-700 rounded-lg">
             {{ students.length }}명
           </span>
         </h3>
-        <p class="text-xs text-slate-400 mt-0.5">아이 정보를 등록하고 수정할 수 있습니다.</p>
+        <p class="text-xs text-slate-400 mt-0.5">학생 정보를 등록하고 수정할 수 있습니다.</p>
       </div>
 
       <!-- Add Student Button (Big Touch Friendly) -->
@@ -18,7 +18,7 @@
         class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs sm:text-sm font-black rounded-xl shadow-md shadow-indigo-100 transition flex items-center gap-1.5 flex-shrink-0 touch-manipulation cursor-pointer"
       >
         <UserPlus class="w-4 h-4" />
-        <span>새 아이 등록</span>
+        <span>새 학생 등록</span>
       </button>
     </div>
 
@@ -27,16 +27,16 @@
       <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-3">
         <Users class="w-8 h-8" />
       </div>
-      <h4 class="font-extrabold text-slate-800 text-base sm:text-lg">등록된 아이가 없습니다</h4>
+      <h4 class="font-extrabold text-slate-800 text-base sm:text-lg">등록된 학생이 없습니다</h4>
       <p class="text-xs sm:text-sm text-slate-500 mt-1 mb-5">
-        우리 반 아이를 등록하면 출석 체크를 시작할 수 있습니다.
+        우리 반 학생을 등록하면 출석 체크를 시작할 수 있습니다.
       </p>
       <button 
         @click="openAddModal" 
         class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-indigo-100 active:scale-95 transition cursor-pointer"
       >
         <UserPlus class="w-5 h-5" />
-        <span>아이 등록하기</span>
+        <span>학생 등록하기</span>
       </button>
     </div>
 
@@ -150,10 +150,10 @@
     </div>
 
     <!-- Student Add/Edit Modal (Large Inputs for Mobile Keyboards) -->
-    <Modal v-model="showModal" :title="isEditing ? '아이 정보 수정' : '우리 반 새 아이 등록'">
+    <Modal v-model="showModal" :title="isEditing ? '학생 정보 수정' : '우리 반 새 학생 등록'">
       <form @submit.prevent="saveStudent" class="space-y-4 text-xs sm:text-sm">
         <div>
-          <label class="block font-black text-slate-800 mb-1">아이 이름 *</label>
+          <label class="block font-black text-slate-800 mb-1">학생 이름 *</label>
           <input 
             v-model="form.name" 
             type="text" 
@@ -312,7 +312,7 @@ const openEditModal = (student) => {
 const saveStudent = async () => {
   if (!currentGroupId.value) return alert('선택한 연도에 반을 먼저 배정해주세요.');
   if (!form.value.name.trim()) {
-    alert('아이 이름을 입력해주세요.');
+    alert('학생 이름을 입력해주세요.');
     return;
   }
 
@@ -332,7 +332,7 @@ const saveStudent = async () => {
 };
 
 const confirmDelete = async (student) => {
-  if (confirm(`'${student.name}' 아이를 명단에서 삭제하시겠습니까?`)) {
+  if (confirm(`'${student.name}' 학생을 명단에서 삭제하시겠습니까?`)) {
     await church.deleteStudent(student.id);
   }
 };
