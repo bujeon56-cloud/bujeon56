@@ -7,24 +7,28 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  const source = await readFile('src/stores/authStore.js', 'utf8');
  const stored = new Map([['bujeon_user_session', JSON.stringify({id:'fake', role:'admin'})]]);
  globalThis.localStorage={removeItem:key=>stored.delete(key),getItem:key=>stored.get(key)};
- let signedOut=0; let denyLogin=false;
+ let signedOut=0; let denyLogin=false; let expectedEmail='teacher@example.com';
  const fakeAuth={currentUser:null,app:{options:{projectId:'test-project'}}};
  let profile={role:'teacher', name:'교사', id:'firebase-uid'};
  const db={getOne:async (col,id)=>{assert.equal(col,'users');assert.equal(id,'firebase-uid');return profile;}};
  globalThis.__authTest={DBService:db,formatTeacherName:name=>name,auth:fakeAuth,authReady:Promise.resolve(),
    signInWithEmailAndPassword:async (auth,email,password)=>{
-     assert.equal(email,'teacher@example.com');
+     assert.equal(email,expectedEmail);
      if(denyLogin) throw Object.assign(new Error('denied'),{code:'auth/invalid-credential'});
      auth.currentUser={uid:'firebase-uid'};
    },
    signOut:async auth=>{signedOut++;auth.currentUser=null;},sendPasswordResetEmail:async()=>{}};
  const transformed=source.replace(/import \{ DBService[^\n]+\n/,'').replace(/import \{ auth,[^\n]+\n/,`const {DBService,formatTeacherName,auth,authReady,signInWithEmailAndPassword,signOut,sendPasswordResetEmail}=globalThis.__authTest;\n`);
  // Relative Pinia import is resolved by an absolute file URL in the in-memory module.
- const code=transformed.replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`);
+ const code=transformed.replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`).replace("from '../utils/classAccounts.js'",`from '${import.meta.resolve('../src/utils/classAccounts.js')}'`);
  const {useAuthStore}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
  setActivePinia(createPinia()); const store=useAuthStore();
  await store.initAuth(); assert.equal(store.user,null); assert.equal(stored.has('bujeon_user_session'),false);
  const user=await store.login('teacher@example.com','proper-password'); assert.equal(user.id,'firebase-uid'); assert.equal(store.isAdmin,false);
+ expectedEmail='26114@accounts.bujeon56.invalid';
+ await store.login('26114','proper-password');
+ assert.equal(store.user.id,'firebase-uid');
+ expectedEmail='teacher@example.com';
  await store.logout(); assert.equal(store.user,null);
  denyLogin=true;
  await assert.rejects(store.login('teacher@example.com','admin1234'));

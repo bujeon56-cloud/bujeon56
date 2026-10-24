@@ -23,6 +23,8 @@
       </button>
     </div>
 
+    <ClassAccountsSetup />
+
     <!-- Teachers Table -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
@@ -30,7 +32,7 @@
           <thead>
             <tr class="bg-slate-50/70 text-[11px] text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
               <th class="py-3 px-4">성함</th>
-              <th class="py-3 px-3">로그인 이메일</th>
+              <th class="py-3 px-3">로그인 아이디 / 이메일</th>
               <th class="py-3 px-3">비밀번호 관리</th>
               <th class="py-3 px-3">권한</th>
               <th class="py-3 px-3">담당 목장(반)</th>
@@ -63,7 +65,7 @@
               <td class="py-3.5 px-3">
                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-indigo-50 text-indigo-800 border border-indigo-200">
                   <Key class="w-3 h-3 text-indigo-600" />
-                  {{ teacher.email }}
+                  {{ teacher.loginCode || teacher.email }}
                 </span>
               </td>
 
@@ -71,10 +73,10 @@
               <td class="py-3.5 px-3">
                 <div class="flex items-center gap-1.5">
                   <span class="text-slate-400 font-mono text-xs">
-                    이메일로 재설정
+                    {{ teacher.accountType === 'class' ? '본인 로그인 후 변경' : '이메일로 재설정' }}
                   </span>
                   <button
-                    @click="openPasswordModal(teacher)"
+                    v-if="teacher.accountType !== 'class'" @click="openPasswordModal(teacher)"
                     class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded-lg border border-slate-200 transition cursor-pointer"
                     title="비밀번호 재설정 이메일"
                   >
@@ -177,6 +179,7 @@
             <label class="block font-bold text-slate-700 mb-1">표시 코드 *</label>
             <input
               v-model="form.username"
+              :disabled="isClassAccount"
               type="text"
               required
               placeholder="예: 11, 12, 21 등"
@@ -198,7 +201,7 @@
           </div>
         </div>
 
-        <div>
+        <div v-if="!isClassAccount">
           <label class="block font-bold text-slate-700 mb-1">로그인 이메일 (필수)</label>
           <input
             v-model="form.email"
@@ -284,10 +287,11 @@
 <script setup>
 import { authErrorMessage } from '../../stores/authStore';
 import { auth, sendPasswordResetEmail } from '../../api/firebase';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
 import { formatTeacherName, DBService } from '../../api/storage';
 import Modal from '../../components/Modal.vue';
+import ClassAccountsSetup from '../../components/ClassAccountsSetup.vue';
 import { UserPlus, Shield, CheckSquare, Edit2, Trash2, Key } from 'lucide-vue-next';
 
 const church = useChurchStore();
@@ -295,6 +299,7 @@ const church = useChurchStore();
 const showModal = ref(false);
 const isEditing = ref(false);
 const editingTeacherId = ref(null);
+const isClassAccount = computed(() => church.teachers.find(t => t.id === editingTeacherId.value)?.accountType === 'class');
 
 // Password Change Modal State
 const showPasswordModal = ref(false);

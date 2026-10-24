@@ -86,7 +86,7 @@
             {{ part1Attended }}<span class="text-xs font-bold text-slate-500"> / {{ part1Total }}명</span>
           </div>
           <div class="text-[11px] font-medium text-slate-400 mt-1">
-            출석률 <strong class="text-slate-800">{{ part1Rate }}%</strong> (14개 목장)
+            출석률 <strong class="text-slate-800">{{ part1Rate }}%</strong> ({{ church.part1Groups.length }}개 목장)
           </div>
         </div>
         <div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold flex-shrink-0">
@@ -102,7 +102,7 @@
             {{ part2Attended }}<span class="text-xs font-bold text-slate-500"> / {{ part2Total }}명</span>
           </div>
           <div class="text-[11px] font-medium text-slate-400 mt-1">
-            출석률 <strong class="text-slate-800">{{ part2Rate }}%</strong> (7개 목장)
+            출석률 <strong class="text-slate-800">{{ part2Rate }}%</strong> ({{ church.part2Groups.length }}개 목장)
           </div>
         </div>
         <div class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold flex-shrink-0">

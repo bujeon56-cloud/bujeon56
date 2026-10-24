@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { classLoginEmail } from '../utils/classAccounts.js';
 import { DBService, formatTeacherName } from '../api/storage';
 import { auth, authReady, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from '../api/firebase';
 
@@ -59,7 +60,7 @@ export const useAuthStore = defineStore('auth', {
       this.error = null;
       try {
         await authReady;
-        await signInWithEmailAndPassword(auth, identifier.trim(), password);
+        await signInWithEmailAndPassword(auth, classLoginEmail(identifier), password);
         return await this.loadProfile();
       } catch (error) {
         this.user = null;
