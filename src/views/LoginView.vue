@@ -7,7 +7,7 @@
       <p v-if="notice" role="status" class="p-3 bg-indigo-50 text-indigo-700 rounded-xl text-sm">{{ notice }}</p>
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <label class="block text-sm font-bold">아이디 또는 이메일
-          <input v-model="email" type="text" autocapitalize="none" spellcheck="false" autocomplete="username" required class="mt-1 w-full border rounded-xl p-3" placeholder="예: bujeon56, 260114 또는 이메일" />
+          <input v-model="email" type="text" autocapitalize="none" spellcheck="false" autocomplete="username" required class="mt-1 w-full border rounded-xl p-3" placeholder="아이디를 입력해주세요" />
         </label>
         <label class="block text-sm font-bold">비밀번호
           <input v-model="password" type="password" autocomplete="current-password" required class="mt-1 w-full border rounded-xl p-3" />
