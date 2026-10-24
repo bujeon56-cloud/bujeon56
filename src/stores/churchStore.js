@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { isProtectedAccount } from '../utils/protectedAccounts.js';
-import { normalizeStudentFields } from '../utils/studentFields.js';
+import { normalizeStudentFields, compareStudentNames } from '../utils/studentFields.js';
 import { compareGroups } from '../utils/groupOrder.js';
 import { DBService } from '../api/storage';
 import { teachersForYear, yearRemovalPlan, teacherGroupForYear } from '../utils/teacherYears.js';
@@ -43,7 +43,7 @@ export const useChurchStore = defineStore('church', {
     },
     // Get students for a specific group
     getStudentsByGroup: (state) => (groupId) => {
-      return state.students.filter(s => s.groupId === groupId && s.year === state.currentYear && s.active !== false);
+      return state.students.filter(s => s.groupId === groupId && s.year === state.currentYear && s.active !== false).sort(compareStudentNames);
     },
     getTeacherGroup: (state) => (teacherId) => {
       return teacherGroupForYear(state.groups, state.currentYear, teacherId);

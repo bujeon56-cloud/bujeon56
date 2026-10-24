@@ -247,7 +247,7 @@
 </template>
 
 <script setup>
-import { gradeLabel } from '../../utils/studentFields.js';
+import { gradeLabel, compareStudentNames } from '../../utils/studentFields.js';
 import { compareGroups } from '../../utils/groupOrder.js';
 import { ref, computed, onMounted } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
@@ -306,7 +306,7 @@ onMounted(() => {
 
 // Student Full Details List
 const allStudentStats = computed(() => {
-  const currentYearStudents = church.students.filter(s => s.year === church.currentYear && s.active !== false);
+  const currentYearStudents = church.students.filter(s => s.year === church.currentYear && s.active !== false).sort(compareStudentNames);
 
   return currentYearStudents.map(student => {
     const stats = studentPointsMap.value[student.id] || {
@@ -338,7 +338,7 @@ const allStudentStats = computed(() => {
 const getStudentsInGroup = (groupId) => {
   return allStudentStats.value
     .filter(s => s.groupId === groupId)
-    .sort((a, b) => b.points - a.points);
+    .sort(compareStudentNames);
 };
 
 // Group Summary Rankings

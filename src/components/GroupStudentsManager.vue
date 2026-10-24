@@ -55,7 +55,7 @@ const church=useChurchStore(),auth=useAuthStore();
 const busy=ref(false),editing=ref(false),editingId=ref(null),error=ref(''),notice=ref('');
 const visible=computed({get:()=>props.modelValue,set:value=>{if(!busy.value)emit('update:modelValue',value);}});
 const group=computed(()=>church.currentGroups.find(group=>group.id===props.groupId));
-const students=computed(()=>group.value ? [...church.getStudentsByGroup(group.value.id)].sort((a,b)=>a.name.localeCompare(b.name,'ko')) : []);
+const students=computed(()=>group.value ? church.getStudentsByGroup(group.value.id) : []);
 const emptyForm=()=>({name:'',grade:'초5',gender:'남',birthDate:'',phone:'',parentPhone:'',notes:''});
 const form=ref(emptyForm());
 const studentPhone=computed({get:()=>formatPhone(form.value.phone),set:value=>{form.value.phone=phoneDigits(value);}});

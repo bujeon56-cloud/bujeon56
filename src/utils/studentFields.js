@@ -3,6 +3,9 @@ export const STUDENT_GRADES = [
   { value: '초6', label: '6학년' },
   { value: '기타', label: '기타' }
 ];
+export function compareStudentNames(a, b) {
+  return String(a.name || '').localeCompare(String(b.name || ''), 'ko', {numeric:true});
+}
 export function studentGrade(value) {
   if (['초5', '5학년', '초등학교 5학년', '5'].includes(String(value))) return '초5';
   if (['초6', '6학년', '초등학교 6학년', '6'].includes(String(value))) return '초6';
