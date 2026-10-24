@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { recentSunday } from '../utils/sundays.js';
+import { recentSunday, sundayForYear } from '../utils/sundays.js';
 import { DBService } from '../api/storage';
 import { useChurchStore } from './churchStore';
 
@@ -34,6 +34,10 @@ export const useAttendanceStore = defineStore('attendance', {
   },
 
   actions: {
+    // Recompute when opening an attendance screen instead of reusing an old selection.
+    resetDefaultDate(year, now = new Date()) {
+      this.selectedDate = sundayForYear(year, recentSunday(now));
+    },
     // 1. Set Selected Date
     setDate(dateStr) {
       this.selectedDate = dateStr;

@@ -407,6 +407,8 @@ import {
 const church = useChurchStore();
 const auth = useAuthStore();
 const attendanceStore = useAttendanceStore();
+attendanceStore.resetDefaultDate(church.currentYear);
+watch(()=>church.currentYear,year=>attendanceStore.resetDefaultDate(year));
 
 const availableSundays = computed(() => sundaysInYear(church.currentYear));
 const sundayIndex = computed(() => availableSundays.value.indexOf(attendanceStore.selectedDate));

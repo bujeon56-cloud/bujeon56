@@ -435,6 +435,8 @@ import {
 const auth = useAuthStore();
 const church = useChurchStore();
 const attendanceStore = useAttendanceStore();
+attendanceStore.resetDefaultDate(church.currentYear);
+watch(()=>church.currentYear,year=>attendanceStore.resetDefaultDate(year));
 
 // UI Preferences (Saved in LocalStorage for teacher convenience)
 const isLargeFont = ref(localStorage.getItem('bujeon_teacher_large_font') === 'true');
