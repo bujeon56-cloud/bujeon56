@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { DBService } from '../api/storage';
-import { auth, createStaffAccount } from '../api/firebase';
+import { teachersForYear, yearRemovalPlan } from '../utils/teacherYears.js';
+import { auth, db, doc, writeBatch, arrayUnion, createStaffAccount } from '../api/firebase';
 import { useAuthStore } from './authStore';
 
 export const useChurchStore = defineStore('church', {
@@ -16,6 +17,7 @@ export const useChurchStore = defineStore('church', {
   }),
 
   getters: {
+    currentTeachers: state => teachersForYear(state.teachers, state.groups, state.currentYear),
     // Current year's groups
     currentGroups: (state) => {
       return state.groups.filter(g => g.year === state.currentYear);
@@ -224,7 +226,7 @@ export const useChurchStore = defineStore('church', {
       if (!profile.email || !password || password.length < 6) throw new Error('이메일과 6자 이상의 비밀번호가 필요합니다.');
       let newTeacher;
       await createStaffAccount(profile.email.trim(), password, async id => {
-        newTeacher = { ...profile, id, role: profile.role || 'teacher', createdAt: new Date().toISOString() };
+        newTeacher = { ...profile, year: this.currentYear, id, role: profile.role || 'teacher', createdAt: new Date().toISOString() };
         await DBService.set('users', id, newTeacher);
       });
       this.teachers.push(newTeacher);
@@ -257,13 +259,23 @@ export const useChurchStore = defineStore('church', {
       }
     },
 
+    async deleteTeachersForYear(ids, year = this.currentYear) {
+      const plan = yearRemovalPlan(this.teachers, this.groups, year, ids, auth.currentUser?.uid);
+      if (!plan.length) return;
+      const batch = writeBatch(db);
+      for (const entry of plan) {
+        batch.update(doc(db, 'users', entry.teacher.id), { removedYears: arrayUnion(year) });
+        for (const group of entry.groups) batch.update(doc(db, 'groups', group.id), { teacherId: null, teacherName: '미배정' });
+      }
+      await batch.commit();
+      for (const entry of plan) {
+        entry.teacher.removedYears = entry.removedYears;
+        for (const group of entry.groups) Object.assign(group, { teacherId: null, teacherName: '미배정' });
+      }
+    },
+
     async deleteTeacher(id) {
-      if (id === auth.currentUser?.uid) throw new Error('현재 로그인한 관리자 계정은 삭제할 수 없습니다.');
-      // Keep historical teacher names on old groups; remove current-year assignment only.
-      const group = this.getTeacherGroup(id);
-      if (group) await this.updateGroup(group.id, { teacherId: null, teacherName: '미배정' });
-      await DBService.delete('users', id);
-      this.teachers = this.teachers.filter(t => t.id !== id);
+      return this.deleteTeachersForYear([id]);
     },
 
     // --- Students Management ---

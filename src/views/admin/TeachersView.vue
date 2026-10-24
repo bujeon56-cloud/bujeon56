@@ -6,7 +6,7 @@
         <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
           <span>선생님 계정 및 반 배정 관리</span>
           <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700">
-            총 {{ church.teachers.length }}명
+            {{ church.currentYear }}년 · 총 {{ church.currentTeachers.length }}명
           </span>
         </h3>
         <p class="text-xs text-slate-400 mt-0.5">
@@ -25,12 +25,18 @@
 
     <ClassAccountsSetup />
 
+    <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-xl border">
+      <p class="text-sm">{{ church.currentYear }}년 명단 · {{ selectedIds.length }}명 선택 <span class="text-xs text-slate-500">관리자는 선택할 수 없습니다.</span></p>
+      <button @click="deleteSelected" :disabled="!selectedIds.length || deleting" class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl disabled:opacity-40">{{ deleting ? '삭제 중…' : '선택한 선생님 삭제' }}</button>
+    </div>
+    <p class="text-xs text-slate-500">삭제하면 선택한 연도의 명단과 반 배정에서만 제외됩니다. 다른 연도와 학생·출석·달란트 기록은 보존됩니다.</p>
     <!-- Teachers Table -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-slate-50/70 text-[11px] text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+              <th class="p-3"><input type="checkbox" aria-label="현재 연도 선생님 전체 선택" :checked="allSelected" :indeterminate="selectedIds.length > 0 && !allSelected" :disabled="deleting || !selectableTeachers.length" @change="toggleAll($event.target.checked)" class="w-5 h-5 accent-indigo-600" /></th>
               <th class="py-3 px-4">성함</th>
               <th class="py-3 px-3">로그인 아이디 / 이메일</th>
               <th class="py-3 px-3">비밀번호 관리</th>
@@ -42,10 +48,11 @@
           </thead>
           <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
             <tr
-              v-for="teacher in church.teachers"
+              v-for="teacher in church.currentTeachers"
               :key="teacher.id"
               class="hover:bg-slate-50/70 transition"
             >
+              <td class="p-3"><input v-model="selectedIds" type="checkbox" :value="teacher.id" :aria-label="getDisplayTeacherName(teacher) + ' 선택'" :disabled="deleting || teacher.role === 'admin' || teacher.id === auth.currentUser?.uid" class="w-5 h-5 accent-indigo-600" /></td>
               <!-- Name (Guaranteed '선생님' for everyone except pastor) -->
               <td class="py-3.5 px-4">
                 <div class="flex items-center gap-2.5">
@@ -138,7 +145,8 @@
                     <Edit2 class="w-3.5 h-3.5" />
                   </button>
                   <button
-                    v-if="teacher.id !== 'user_admin_pastor'"
+                    v-if="teacher.role !== 'admin' && teacher.id !== auth.currentUser?.uid"
+                    :disabled="deleting"
                     @click="confirmDeleteTeacher(teacher)"
                     class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                     title="선생님 삭제"
@@ -287,7 +295,7 @@
 <script setup>
 import { authErrorMessage } from '../../stores/authStore';
 import { auth, sendPasswordResetEmail } from '../../api/firebase';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
 import { formatTeacherName, DBService } from '../../api/storage';
 import Modal from '../../components/Modal.vue';
@@ -295,6 +303,23 @@ import ClassAccountsSetup from '../../components/ClassAccountsSetup.vue';
 import { UserPlus, Shield, CheckSquare, Edit2, Trash2, Key } from 'lucide-vue-next';
 
 const church = useChurchStore();
+const selectedIds = ref([]);
+const deleting = ref(false);
+const selectableTeachers = computed(() => church.currentTeachers.filter(t => t.role !== 'admin' && t.id !== auth.currentUser?.uid));
+const allSelected = computed(() => selectableTeachers.value.length > 0 && selectableTeachers.value.every(t => selectedIds.value.includes(t.id)));
+watch(() => church.currentYear, () => { selectedIds.value = []; showModal.value = false; });
+watch(() => selectableTeachers.value.map(t => t.id), ids => { selectedIds.value = selectedIds.value.filter(id => ids.includes(id)); });
+const toggleAll = checked => { selectedIds.value = checked ? selectableTeachers.value.map(t => t.id) : []; };
+async function removeTeachers(ids) {
+  if (deleting.value || !ids.length) return;
+  const year = church.currentYear;
+  if (!confirm(year + '년 명단에서 선택한 선생님 ' + ids.length + '명을 삭제하시겠습니까? 해당 연도의 반 배정만 해제되며 다른 연도와 출석 기록은 보존됩니다.')) return;
+  deleting.value = true;
+  try { await church.deleteTeachersForYear(ids, year); selectedIds.value = []; }
+  catch (error) { alert(authErrorMessage(error)); }
+  finally { deleting.value = false; }
+}
+const deleteSelected = () => removeTeachers([...selectedIds.value]);
 
 const showModal = ref(false);
 const isEditing = ref(false);
@@ -441,10 +466,5 @@ const saveTeacher = async () => {
   } catch (error) { alert(authErrorMessage(error)); }
 };
 
-const confirmDeleteTeacher = async (teacher) => {
-  if (confirm(`'${getDisplayTeacherName(teacher)}'을(를) 삭제하시겠습니까?`)) {
-    try { await church.deleteTeacher(teacher.id); }
-    catch (error) { alert(authErrorMessage(error)); }
-  }
-};
+const confirmDeleteTeacher = teacher => removeTeachers([teacher.id]);
 </script>
