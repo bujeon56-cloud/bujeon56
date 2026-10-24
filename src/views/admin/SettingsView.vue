@@ -1,5 +1,6 @@
 <template>
   <div class="space-y-6">
+    <AdminAccountSetup />
     <!-- Section 1: Dynamic Check Items & Talent Points Configuration -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
@@ -239,6 +240,7 @@
 </template>
 
 <script setup>
+import AdminAccountSetup from '../../components/AdminAccountSetup.vue';
 import { ref } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
 import Modal from '../../components/Modal.vue';

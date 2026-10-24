@@ -1,5 +1,6 @@
 export function classLoginEmail(identifier) {
   let value = String(identifier).normalize('NFKC').replace(/[\u200B-\u200D\uFEFF]/g, '').trim().toLowerCase();
+  if (value === 'bujeon56') return 'bujeon56@accounts.bujeon56.invalid';
   if (/^[\d\s-]+$/.test(value)) value = value.replace(/[\s-]/g, '');
   if (/^20\d{2}0[12](?:0[1-9]|[1-9]\d)$/.test(value)) value = value.slice(2);
   return /^(?:\d{2}0[12](?:0[1-9]|[1-9]\d)|\d{2}[12][1-9]\d?)$/.test(value) ? `${value}@accounts.bujeon56.invalid` : value;

@@ -2,12 +2,12 @@
   <div class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-white rounded-3xl p-6 shadow-lg space-y-5">
       <h1 class="text-2xl font-black text-indigo-700">소년부 스마트 출석부</h1>
-      <p class="text-sm text-slate-600">목장 아이디 또는 등록된 이메일로 로그인하세요.</p>
+      <p class="text-sm text-slate-600">목장 아이디, 관리자 아이디 또는 등록된 이메일로 로그인하세요.</p>
       <p v-if="error || auth.error" role="alert" class="p-3 bg-rose-50 text-rose-700 rounded-xl text-sm">{{ error || auth.error }}</p>
       <p v-if="notice" role="status" class="p-3 bg-indigo-50 text-indigo-700 rounded-xl text-sm">{{ notice }}</p>
       <form @submit.prevent="handleSubmit" class="space-y-4">
-        <label class="block text-sm font-bold">목장 아이디 또는 이메일
-          <input v-model="email" type="text" autocapitalize="none" spellcheck="false" autocomplete="username" required class="mt-1 w-full border rounded-xl p-3" placeholder="예: 260114 또는 20260114, 관리자 이메일" />
+        <label class="block text-sm font-bold">아이디 또는 이메일
+          <input v-model="email" type="text" autocapitalize="none" spellcheck="false" autocomplete="username" required class="mt-1 w-full border rounded-xl p-3" placeholder="예: bujeon56, 260114 또는 이메일" />
         </label>
         <label class="block text-sm font-bold">비밀번호
           <input v-model="password" type="password" autocomplete="current-password" required class="mt-1 w-full border rounded-xl p-3" />

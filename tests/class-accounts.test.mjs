@@ -34,3 +34,9 @@ test('full year IDs and pasted phone number forms resolve to the existing six-di
  for(const input of ['20260114','260114','２０２６０１１４','2026-01-14',' 2026 01 14 ','20260114\u200B']) assert.equal(classLoginEmail(input),'260114@accounts.bujeon56.invalid');
  assert.equal(classLoginEmail('20260208'),'260208@accounts.bujeon56.invalid');
 });
+
+test('administrator alias resolves to a separate Auth account without changing email login',()=>{
+ assert.equal(classLoginEmail(' bujeon56 '),'bujeon56@accounts.bujeon56.invalid');
+ assert.equal(classLoginEmail('BUJEON56'),'bujeon56@accounts.bujeon56.invalid');
+ assert.equal(classLoginEmail('bujeon56@gmail.com'),'bujeon56@gmail.com');
+});

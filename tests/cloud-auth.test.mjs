@@ -29,6 +29,13 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  await store.login('20260114','proper-password');
  await store.login('260114','proper-password');
  assert.equal(store.user.id,'firebase-uid');
+ expectedEmail='bujeon56@accounts.bujeon56.invalid';
+ await store.login('bujeon56','proper-password');
+ assert.equal(store.isAdmin,false);
+ profile={...profile,role:'admin'};
+ await store.login('bujeon56','proper-password');
+ assert.equal(store.isAdmin,true);
+ profile={...profile,role:'teacher'};
  expectedEmail='teacher@example.com';
  await store.logout(); assert.equal(store.user,null);
  denyLogin=true;
