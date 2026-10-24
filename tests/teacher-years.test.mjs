@@ -1,9 +1,28 @@
 import {compareGroups} from '../src/utils/groupOrder.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {teachersForYear,yearRemovalPlan} from '../src/utils/teacherYears.js';
 const teachers=[{id:'admin',role:'admin'},{id:'shared',role:'teacher'},{id:'old',role:'teacher',year:'2025'},{id:'unassigned',role:'teacher',year:'2026'},{id:'class',role:'teacher',loginCode:'260208'}];
 const groups=[{id:'a',year:'2025',teacherId:'shared'},{id:'b',year:'2026',teacherId:'shared'}];
+
+test('year creation rejects local and database duplicates before writing or changing selected year',async()=>{
+ const source=await readFile('src/stores/churchStore.js','utf8');
+ const body=source.match(/async addNewYear\(newYear, copyPreviousSettings = false\) \{([\s\S]*?)\n    \},/)[1];
+ const remote=new Set(['2027']),writes=[];
+ const transaction={get:async id=>({exists:()=>remote.has(id)}),set:(...args)=>writes.push(args)};
+ const add=new Function('db','doc','runTransaction',`return async function(newYear,copyPreviousSettings=false){${body}}`)({},(_db,_collection,id)=>id,async(_db,fn)=>fn(transaction));
+ const state={years:[{id:2026,isCurrent:true}],currentYear:'2026',groups:[]};
+ await assert.rejects(add.call(state,'2026'),/이미 존재/);
+ await assert.rejects(add.call(state,'2027'),/이미 존재/);
+ for(const input of ['',2027.5,'twenty','20270'])await assert.rejects(add.call(state,input),/숫자 4자리/);
+ assert.deepEqual(writes,[]);assert.equal(state.currentYear,'2026');assert.equal(state.years[0].isCurrent,true);
+ await add.call(state,'2028');
+ assert.equal(state.currentYear,'2028');assert.equal(state.years.length,2);
+ assert.deepEqual(writes.map(w=>w[0]),['2026','2028']);
+ await assert.rejects(add.call(state,'2028'),/이미 존재/);
+ assert.equal(writes.length,2);
+});
 test('year list includes assigned, unassigned and legacy class accounts but excludes other years',()=>{
  assert.deepEqual(teachersForYear(teachers,groups,'2026').map(t=>t.id),['shared','unassigned','class']);
  assert.deepEqual(teachersForYear(teachers,groups,'2025').map(t=>t.id),['shared','old']);

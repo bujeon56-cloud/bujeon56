@@ -197,13 +197,15 @@
           <label class="block font-bold text-slate-700 mb-1">신규 개설 연도 (숫자 4자리) *</label>
           <input 
             v-model="newYearInput" 
+            :disabled="creatingYear"
             type="number" 
             required 
-            min="2024" 
-            max="2035"
+            min="2000"
+            max="2099"
             placeholder="예: 2027"
             class="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           />
+          <p v-if="duplicateYear" role="alert" class="text-rose-600 mt-2">이미 등록된 연도입니다. 다른 연도를 입력해주세요.</p>
         </div>
 
         <div class="p-3 bg-indigo-50/70 rounded-xl border border-indigo-100 space-y-2">
@@ -230,9 +232,10 @@
         </button>
         <button 
           @click="saveNewYear" 
-          class="px-5 py-2 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200"
+          :disabled="creatingYear || duplicateYear || !validYear"
+          class="px-5 py-2 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200 disabled:opacity-40"
         >
-          개설하기
+          {{ creatingYear ? '개설 중…' : '개설하기' }}
         </button>
       </template>
     </Modal>
@@ -240,7 +243,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
 import Modal from '../../components/Modal.vue';
 import { Sliders, Calendar, CheckSquare, Coins, Plus, Edit2, Trash2 } from 'lucide-vue-next';
@@ -258,6 +261,9 @@ const itemForm = ref({
 
 const showYearModal = ref(false);
 const newYearInput = ref(Number(church.currentYear) + 1);
+const creatingYear = ref(false);
+const duplicateYear = computed(() => church.years.some(year => String(year.id) === String(newYearInput.value).trim()));
+const validYear = computed(() => /^20\d{2}$/.test(String(newYearInput.value).trim()));
 const copyPreviousGroups = ref(false);
 
 const getItemColorClass = (item) => {
@@ -323,12 +329,17 @@ const openAddYearModal = () => {
 };
 
 const saveNewYear = async () => {
+  if (creatingYear.value || duplicateYear.value || !validYear.value) return;
+  creatingYear.value = true;
+  const year = newYearInput.value;
   try {
-    await church.addNewYear(newYearInput.value, copyPreviousGroups.value);
+    await church.addNewYear(year, copyPreviousGroups.value);
     showYearModal.value = false;
-    alert(`${newYearInput.value}년도 출석부가 성공적으로 개설되었습니다!`);
+    alert(`${year}년도 출석부가 성공적으로 개설되었습니다!`);
   } catch (err) {
     alert(err.message || '연도 생성에 실패하였습니다.');
+  } finally {
+    creatingYear.value = false;
   }
 };
 </script>

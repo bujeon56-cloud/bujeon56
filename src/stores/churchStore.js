@@ -3,7 +3,7 @@ import { normalizeStudentFields } from '../utils/studentFields.js';
 import { compareGroups } from '../utils/groupOrder.js';
 import { DBService } from '../api/storage';
 import { teachersForYear, yearRemovalPlan, teacherGroupForYear } from '../utils/teacherYears.js';
-import { auth, db, doc, writeBatch, arrayUnion, createStaffAccount } from '../api/firebase';
+import { auth, db, doc, runTransaction, writeBatch, arrayUnion, createStaffAccount } from '../api/firebase';
 import { useAuthStore } from './authStore';
 
 export const useChurchStore = defineStore('church', {
@@ -110,8 +110,9 @@ export const useChurchStore = defineStore('church', {
     // Add New Year
     async addNewYear(newYear, copyPreviousSettings = false) {
       const sourceYear = this.currentYear;
-      const yearId = String(newYear);
-      const exists = this.years.some(y => y.id === yearId);
+      const yearId = String(newYear).trim();
+      if (!/^20\d{2}$/.test(yearId)) throw new Error('연도는 2000~2099 사이의 숫자 4자리로 입력해주세요.');
+      const exists = this.years.some(y => String(y.id) === yearId);
       if (exists) {
         throw new Error('이미 존재하는 연도입니다.');
       }
@@ -123,14 +124,16 @@ export const useChurchStore = defineStore('church', {
         createdAt: new Date().toISOString()
       };
 
-      // Set other years isCurrent to false
-      for (const y of this.years) {
-        if (y.isCurrent) {
-          await DBService.set('years', y.id, { ...y, isCurrent: false });
+      // Check the database too: another administrator may have created this year.
+      await runTransaction(db, async transaction => {
+        const target = doc(db, 'years', yearId);
+        const existing = await transaction.get(target);
+        if (existing.exists()) throw new Error('이미 존재하는 연도입니다.');
+        for (const y of this.years) {
+          if (y.isCurrent) transaction.set(doc(db, 'years', String(y.id)), {isCurrent:false}, {merge:true});
         }
-      }
-
-      await DBService.set('years', yearId, yearObj);
+        transaction.set(target, yearObj);
+      });
       this.years.forEach(y => y.isCurrent = false);
       this.years.unshift(yearObj);
       this.currentYear = yearId;
