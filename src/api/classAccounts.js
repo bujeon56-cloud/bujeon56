@@ -23,7 +23,7 @@ export function classProvisioner(groups, users) {
       const groupData = group || { id: groupId, year: row.year, departmentId: row.departmentId, departmentName: row.departmentName, name: row.name, order: row.order };
       if (!auth.currentUser) throw new Error('관리자로 다시 로그인해주세요.');
       await createStaffAccount(row.email, row.password, async uid => {
-        const teacher = {id:uid, role:'teacher', username:row.code, loginCode:row.code, accountType:'class', email:row.email, name:`${row.departmentName} ${row.name} 선생님`, groupId, groupName:`${row.departmentName} ${row.name}`, departmentId:row.departmentId, createdAt:new Date().toISOString()};
+        const teacher = {id:uid, role:'teacher', username:row.code, loginCode:row.code, accountType:'class', email:row.email, name:row.teacherName === '미정' ? '미정' : row.teacherName.replace(/\s*선생님$/, '') + ' 선생님', groupId, groupName:`${row.departmentName} ${row.name}`, departmentId:row.departmentId, createdAt:new Date().toISOString()};
         const batch = writeBatch(db);
         batch.set(doc(db,'users',uid), teacher);
         batch.set(doc(db,'groups',groupId), {...groupData, teacherId:uid, teacherName:teacher.name}, {merge:true});

@@ -7,7 +7,7 @@
       <p v-if="notice" role="status" class="p-3 bg-indigo-50 text-indigo-700 rounded-xl text-sm">{{ notice }}</p>
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <label class="block text-sm font-bold">목장 아이디 또는 이메일
-          <input v-model="email" type="text" autocapitalize="none" spellcheck="false" autocomplete="username" required class="mt-1 w-full border rounded-xl p-3" placeholder="예: 2611, 26114, 2628 또는 관리자 이메일" />
+          <input v-model="email" type="text" autocapitalize="none" spellcheck="false" autocomplete="username" required class="mt-1 w-full border rounded-xl p-3" placeholder="예: 260101, 260114, 260208 또는 관리자 이메일" />
         </label>
         <label class="block text-sm font-bold">비밀번호
           <input v-model="password" type="password" autocomplete="current-password" required class="mt-1 w-full border rounded-xl p-3" />
@@ -15,7 +15,7 @@
         <button :disabled="busy" class="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold disabled:opacity-50">{{ busy ? '로그인 중…' : '로그인' }}</button>
       </form>
       <button @click="resetPassword" :disabled="busy" class="text-sm text-indigo-700 underline">비밀번호 재설정 이메일 받기</button>
-      <p class="text-xs text-slate-500">목장 아이디는 연도 두 자리 + 부서 + 목장 번호입니다. 초기 비밀번호는 관리자에게 받으세요.</p>
+      <p class="text-xs text-slate-500">목장 아이디는 연도 2자리 + 부서 2자리 + 목장 2자리입니다. 초기 비밀번호는 아이디와 같습니다.</p>
     </div>
   </div>
 </template>
