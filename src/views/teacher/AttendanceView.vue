@@ -1,18 +1,7 @@
 <template>
-  <div class="space-y-4 pb-12 sm:pb-6" :class="{ 'text-base': isLargeFont, 'text-sm': !isLargeFont }">
+  <div class="space-y-4 pb-12 sm:pb-6 text-sm">
     <!-- Top Utility & Mode Bar -->
-    <div class="flex items-center justify-between gap-2 px-1">
-      <!-- Large Font Mode Toggle (For Senior Teachers) -->
-      <button
-        @click="toggleLargeFont"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition shadow-sm text-xs font-bold"
-        :class="isLargeFont ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
-        title="글씨와 버튼을 크게 보기"
-      >
-        <ZoomIn class="w-4 h-4" />
-        <span>{{ isLargeFont ? '보통 글씨로' : '큰 글씨 모드 🔍' }}</span>
-      </button>
-
+    <div class="flex items-center justify-end gap-2 px-1">
       <!-- View Mode Toggle: Cards vs Table -->
       <div class="inline-flex rounded-xl bg-slate-200/80 p-0.5 border border-slate-200">
         <button
@@ -426,7 +415,6 @@ import {
   Lock,
   Send,
   Check,
-  ZoomIn,
   LayoutGrid,
   Table as TableIcon,
   MessageSquare
@@ -439,17 +427,11 @@ attendanceStore.resetDefaultDate(church.currentYear);
 watch(()=>church.currentYear,year=>attendanceStore.resetDefaultDate(year));
 
 // UI Preferences (Saved in LocalStorage for teacher convenience)
-const isLargeFont = ref(localStorage.getItem('bujeon_teacher_large_font') === 'true');
 const viewMode = ref(localStorage.getItem('bujeon_teacher_view_mode') || 'cards'); // 'cards' | 'table'
 
 const showSubmitModal = ref(false);
 const submitting = ref(false);
 const submissionNotes = ref('');
-
-const toggleLargeFont = () => {
-  isLargeFont.value = !isLargeFont.value;
-  localStorage.setItem('bujeon_teacher_large_font', isLargeFont.value);
-};
 
 watch(viewMode, (newVal) => {
   localStorage.setItem('bujeon_teacher_view_mode', newVal);
