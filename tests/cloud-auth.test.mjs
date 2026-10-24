@@ -8,7 +8,7 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  const stored = new Map([['bujeon_user_session', JSON.stringify({id:'fake', role:'admin'})]]);
  globalThis.localStorage={removeItem:key=>stored.delete(key),getItem:key=>stored.get(key)};
  let signedOut=0; let denyLogin=false;
- const fakeAuth={currentUser:null};
+ const fakeAuth={currentUser:null,app:{options:{projectId:'test-project'}}};
  let profile={role:'teacher', name:'교사', id:'firebase-uid'};
  const db={getOne:async (col,id)=>{assert.equal(col,'users');assert.equal(id,'firebase-uid');return profile;}};
  globalThis.__authTest={DBService:db,formatTeacherName:name=>name,auth:fakeAuth,authReady:Promise.resolve(),
@@ -30,7 +30,10 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  await assert.rejects(store.login('teacher@example.com','admin1234'));
  assert.equal(store.isAuthenticated,false);
  denyLogin=false; profile=null;
- await assert.rejects(store.login('teacher@example.com','proper-password'),/교직원/);
+ await assert.rejects(store.login('teacher@example.com','proper-password'),/교직원 문서가 없습니다.*test-project.*users\/firebase-uid/);
+ profile={role:'Admin'};
+ await assert.rejects(store.login('teacher@example.com','proper-password'),/role.*Admin/);
+ assert.equal(store.isAuthenticated,false);
  assert.equal(fakeAuth.currentUser,null); assert.ok(signedOut>=3);
  delete globalThis.__authTest;
 });

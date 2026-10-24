@@ -32,8 +32,12 @@ export const useAuthStore = defineStore('auth', {
     async loadProfile() {
       if (!auth.currentUser) { this.user = null; return null; }
       const profile = await DBService.getOne('users', auth.currentUser.uid);
-      if (!profile || !['admin', 'teacher'].includes(profile.role)) {
-        throw new Error('등록된 교직원 정보가 없습니다. 관리자에게 계정 등록을 요청해주세요.');
+      const location = '프로젝트 ' + auth.app.options.projectId + ' / 기본(default) DB / users/' + auth.currentUser.uid;
+      if (!profile) {
+        throw new Error('교직원 문서가 없습니다. 확인할 위치: ' + location);
+      }
+      if (!['admin', 'teacher'].includes(profile.role)) {
+        throw new Error('교직원 문서는 있으나 role 값이 올바르지 않습니다. 현재 값: ' + JSON.stringify(profile.role ?? null) + '. 문자열 admin 또는 teacher가 필요합니다. 확인할 위치: ' + location);
       }
       this.user = { ...profile, id: auth.currentUser.uid };
       return this.user;
