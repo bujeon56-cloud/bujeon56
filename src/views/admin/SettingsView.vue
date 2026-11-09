@@ -10,7 +10,7 @@
             <span>출석부 체크 항목 및 달란트 점수 설정</span>
           </h3>
           <p class="text-xs text-slate-500 mt-1">
-            성경읽기, 대표기도 등 체크박스 항목을 추가/삭제하고, 각 항목의 달란트 점수를 정할 수 있습니다.
+            항목마다 체크박스 또는 주간 일수 선택을 설정하고 달란트 점수를 정할 수 있습니다.
           </p>
         </div>
 
@@ -48,7 +48,8 @@
                 </span>
               </div>
               <div class="text-xs text-slate-400 mt-0.5">
-                체크 1회당 <strong class="text-amber-500 font-bold">{{ item.points }} 달란트</strong> 부여
+                {{ checkItemMaxDays(item) ? `0~${checkItemMaxDays(item)}일 선택 · 1일당` : '체크 1회당' }}
+                <strong class="text-amber-500 font-bold">{{ item.points }} 달란트</strong>
               </div>
             </div>
           </div>
@@ -158,8 +159,17 @@
           />
         </div>
 
+        <label v-if="editingItemId !== 'attendance'" class="block font-bold text-slate-700">
+          출석부 입력 방식
+          <select v-model.number="itemForm.maxDays" class="mt-1 block w-full px-3 py-2 rounded-xl border border-slate-200">
+            <option :value="0">체크박스</option>
+            <option v-for="day in WEEK_DAYS" :key="day" :value="day">주간 일수 선택 (0~{{ day }}일)</option>
+          </select>
+          <span class="mt-1 block text-[11px] font-normal text-slate-500">예를 들어 큐티에 7일을 설정하면 출석부에서 0~7일을 선택할 수 있습니다.</span>
+        </label>
+
         <div>
-          <label class="block font-bold text-slate-700 mb-1">체크 1회당 지급할 달란트 점수 *</label>
+          <label class="block font-bold text-slate-700 mb-1">{{ itemForm.maxDays ? '1일당' : '체크 1회당' }} 지급할 달란트 점수 *</label>
           <div class="flex items-center gap-2">
             <input 
               v-model.number="itemForm.points" 
@@ -245,6 +255,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
+import { checkItemMaxDays, WEEK_DAYS } from '../../utils/attendanceChecks.js';
 import Modal from '../../components/Modal.vue';
 import { Sliders, Calendar, CheckSquare, Coins, Plus, Edit2, Trash2 } from 'lucide-vue-next';
 
@@ -256,6 +267,7 @@ const editingItemId = ref(null);
 const itemForm = ref({
   label: '',
   points: 3,
+  maxDays: 0,
   color: 'blue'
 });
 
@@ -284,6 +296,7 @@ const openAddCheckItemModal = () => {
   itemForm.value = {
     label: '',
     points: 3,
+    maxDays: 0,
     color: 'blue'
   };
   showItemModal.value = true;
@@ -292,7 +305,7 @@ const openAddCheckItemModal = () => {
 const openEditCheckItemModal = (item) => {
   isEditingItem.value = true;
   editingItemId.value = item.id;
-  itemForm.value = { ...item };
+  itemForm.value = { ...item, maxDays: checkItemMaxDays(item) };
   showItemModal.value = true;
 };
 
@@ -306,17 +319,19 @@ const saveCheckItem = async () => {
     return;
   }
 
+  const { label, points, color, maxDays } = itemForm.value;
+  const values = { label: label.trim(), points, color, maxDays };
   if (isEditingItem.value) {
-    await church.updateCheckItem(editingItemId.value, itemForm.value);
+    await church.updateCheckItem(editingItemId.value, { label: values.label, points, maxDays });
   } else {
-    await church.addCheckItem(itemForm.value);
+    await church.addCheckItem(values);
   }
 
   showItemModal.value = false;
 };
 
 const confirmDeleteCheckItem = async (item) => {
-  if (confirm(`'${item.label}' 항목을 삭제하시겠습니까? 출석부에서 해당 체크박스가 제거됩니다.`)) {
+  if (confirm(`'${item.label}' 항목을 삭제하시겠습니까? 출석부에서 해당 항목이 제거됩니다.`)) {
     await church.deleteCheckItem(item.id);
   }
 };

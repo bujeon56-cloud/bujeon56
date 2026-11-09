@@ -4,7 +4,6 @@
       <h1 class="text-2xl font-black text-indigo-700">소년부 스마트 출석부</h1>
       <p class="text-sm text-slate-600">목장 아이디, 관리자 아이디 또는 등록된 이메일로 로그인하세요.</p>
       <p v-if="error || auth.error" role="alert" class="p-3 bg-rose-50 text-rose-700 rounded-xl text-sm">{{ error || auth.error }}</p>
-      <p v-if="notice" role="status" class="p-3 bg-indigo-50 text-indigo-700 rounded-xl text-sm">{{ notice }}</p>
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <label class="block text-sm font-bold">아이디 또는 이메일
           <input v-model="email" type="text" autocapitalize="none" spellcheck="false" autocomplete="username" required class="mt-1 w-full border rounded-xl p-3" placeholder="아이디를 입력해주세요" />
@@ -14,8 +13,6 @@
         </label>
         <button :disabled="busy" class="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold disabled:opacity-50">{{ busy ? '로그인 중…' : '로그인' }}</button>
       </form>
-      <button @click="resetPassword" :disabled="busy" class="text-sm text-indigo-700 underline">비밀번호 재설정 이메일 받기</button>
-      <p class="text-xs text-slate-500">목장 아이디는 260114처럼 6자리입니다. 20260114처럼 연도를 4자리로 입력해도 됩니다. 초기 비밀번호는 6자리 아이디와 같습니다.</p>
     </div>
   </div>
 </template>
@@ -24,29 +21,32 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore, authErrorMessage } from '../stores/authStore';
 import { useChurchStore } from '../stores/churchStore';
+const loginIdKey = 'bujeon:login-id';
 const auth = useAuthStore();
 const church = useChurchStore();
 const router = useRouter();
 const email = ref('');
+try {
+  email.value = sessionStorage.getItem(loginIdKey) ?? '';
+} catch {
+  // Session storage may be blocked by the browser.
+}
 const password = ref('');
 const busy = ref(false);
 const error = ref('');
-const notice = ref('');
 async function handleSubmit() {
-  busy.value = true; error.value = ''; notice.value = '';
+  busy.value = true;
+  error.value = '';
+  try {
+    sessionStorage.setItem(loginIdKey, email.value.trim());
+  } catch {
+    // Allow login even when session storage is unavailable.
+  }
   try {
     const user = await auth.login(email.value, password.value);
     await church.initChurchData();
     router.push(user.role === 'admin' ? '/admin/dashboard' : '/teacher/attendance');
   } catch (err) { error.value = authErrorMessage(err); }
-  finally { busy.value = false; }
-}
-async function resetPassword() {
-  error.value = ''; notice.value = '';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { error.value = '목장 아이디는 이메일 재설정을 사용할 수 없습니다. 로그인 후 비밀번호를 변경하세요. 이메일 계정은 이메일을 입력해주세요.'; return; }
-  busy.value = true;
-  try { await auth.resetPassword(email.value); notice.value = '등록된 계정이면 재설정 이메일이 발송됩니다. 스팸함도 확인해주세요.'; }
-  catch (err) { error.value = authErrorMessage(err); }
   finally { busy.value = false; }
 }
 </script>

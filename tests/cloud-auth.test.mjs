@@ -10,7 +10,8 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  let signedOut=0; let denyLogin=false; let expectedEmail='teacher@example.com';
  const fakeAuth={currentUser:null,app:{options:{projectId:'test-project'}}};
  let profile={role:'teacher', name:'교사', id:'firebase-uid'};
- const db={getOne:async (col,id)=>{assert.equal(col,'users');assert.equal(id,'firebase-uid');return profile;}};
+ let profileError;
+ const db={getOne:async (col,id)=>{assert.equal(col,'users');assert.equal(id,'firebase-uid');if(profileError) throw profileError;return profile;}};
  globalThis.__authTest={DBService:db,formatTeacherName:name=>name,auth:fakeAuth,authReady:Promise.resolve(),
    signInWithEmailAndPassword:async (auth,email,password)=>{
      assert.equal(email,expectedEmail);
@@ -25,6 +26,15 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  setActivePinia(createPinia()); const store=useAuthStore();
  await store.initAuth(); assert.equal(store.user,null); assert.equal(stored.has('bujeon_user_session'),false);
  const user=await store.login('teacher@example.com','proper-password'); assert.equal(user.id,'firebase-uid'); assert.equal(store.isAdmin,false);
+ const restoredStore=useAuthStore(createPinia());
+ profileError=Object.assign(new Error('offline'),{code:'unavailable'});
+ await restoredStore.initAuth();
+ assert.equal(restoredStore.isAuthenticated,false);
+ assert.equal(fakeAuth.currentUser.uid,'firebase-uid');
+ profileError=undefined;
+ await restoredStore.initAuth();
+ assert.equal(restoredStore.user.id,'firebase-uid');
+ assert.equal(restoredStore.error,null);
  expectedEmail='260114@accounts.bujeon56.invalid';
  await store.login('20260114','proper-password');
  await store.login('260114','proper-password');
@@ -38,6 +48,7 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  profile={...profile,role:'teacher'};
  expectedEmail='teacher@example.com';
  await store.logout(); assert.equal(store.user,null);
+ await restoredStore.initAuth(); assert.equal(restoredStore.user,null);
  denyLogin=true;
  await assert.rejects(store.login('teacher@example.com','admin1234'));
  assert.equal(store.isAuthenticated,false);

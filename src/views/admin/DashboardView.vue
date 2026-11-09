@@ -347,7 +347,16 @@
               <tr v-for="s in inspectingStudents" :key="s.id">
                 <td class="py-2.5 px-3 font-bold text-slate-800">{{ s.name }}</td>
                 <td v-for="item in church.activeCheckItems" :key="item.id" class="py-2.5 px-2 text-center">
-                  <input type="checkbox" :checked="!!inspectingRecords[s.id]?.[item.id]" @change="setInspectCheck(s.id, item.id, $event.target.checked)" :disabled="inspectLoading || inspectSaving || !inspectContext || !auth.isAdmin" :aria-label="s.name + ' ' + item.label" class="w-5 h-5 accent-indigo-600 disabled:opacity-40" />
+                  <AttendanceDaySelect
+                    v-if="checkItemMaxDays(item)"
+                    class="min-w-[13rem]"
+                    :value="inspectingRecords[s.id]?.[item.id]"
+                    :max-days="checkItemMaxDays(item)"
+                    :label="s.name + ' ' + item.label"
+                    :disabled="inspectLoading || inspectSaving || !inspectContext || !auth.isAdmin"
+                    @change="setInspectCheck(s.id, item.id, $event)"
+                  />
+                  <input v-else type="checkbox" :checked="!!inspectingRecords[s.id]?.[item.id]" @change="setInspectCheck(s.id, item.id, $event.target.checked)" :disabled="inspectLoading || inspectSaving || !inspectContext || !auth.isAdmin" :aria-label="s.name + ' ' + item.label" class="w-5 h-5 accent-indigo-600 disabled:opacity-40" />
                 </td>
               </tr>
             </tbody>
@@ -383,6 +392,8 @@
 </template>
 
 <script setup>
+import AttendanceDaySelect from '../../components/AttendanceDaySelect.vue';
+import { checkCount, checkItemMaxDays } from '../../utils/attendanceChecks.js';
 import { ref, shallowRef, computed, watch } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
 import { useAttendanceStore } from '../../stores/attendanceStore';
@@ -428,8 +439,10 @@ watch([()=>church.currentYear,()=>attendanceStore.selectedDate],()=>{
 const inspectChanges = computed(()=>{
   const changes={};
   for(const student of inspectingStudents.value)for(const item of church.activeCheckItems){
-    const value=!!inspectingRecords.value[student.id]?.[item.id];
-    if(value!==!!inspectOriginal.value[student.id]?.[item.id]) (changes[student.id] ||= {})[item.id]=value;
+    const current = inspectingRecords.value[student.id]?.[item.id];
+    const original = inspectOriginal.value[student.id]?.[item.id];
+    const normalize = checkItemMaxDays(item) ? checkCount : Boolean;
+    if (normalize(current) !== normalize(original)) (changes[student.id] ||= {})[item.id] = normalize(current);
   }
   return changes;
 });

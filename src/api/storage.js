@@ -1,5 +1,5 @@
 import { normalizeStudentFields } from '../utils/studentFields.js';
-import { clearedAttendance } from '../utils/attendanceChecks.js';
+import { clearedAttendance, WEEK_DAYS } from '../utils/attendanceChecks.js';
 import {
   db,
   isFirebaseConfigured,
@@ -336,6 +336,12 @@ export const DBService = {
     return items;
   },
 
+  watchCheckItems(onItems, onError) {
+    return onSnapshot(collection(db, 'checkItems'), snapshot => {
+      onItems(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+    }, onError);
+  },
+
   async getOne(colName, id) {
     if (this.isUsingCloud()) {
       try {
@@ -445,7 +451,7 @@ export const DBService = {
         return await runTransaction(db, async transaction => {
           const snap = await transaction.get(docRef);
           const records = snap.exists() ? snap.data().records || {} : {};
-          records[studentId] = { ...checkValues, updatedAt: timestamp };
+          records[studentId] = { ...records[studentId], ...checkValues, updatedAt: timestamp };
           transaction.set(docRef, { year, date, groupId, records, updatedAt: timestamp }, { merge: true });
           return records;
         });
@@ -466,6 +472,7 @@ export const DBService = {
       };
     }
     attendances[key].records[studentId] = {
+      ...attendances[key].records[studentId],
       ...checkValues,
       updatedAt: timestamp
     };
@@ -486,7 +493,10 @@ export const DBService = {
       const records = { ...(attendance.exists() ? attendance.data().records : {}) };
       const timestamp = new Date().toISOString();
       for (const [studentId, checks] of Object.entries(changes)) {
-        if (Object.values(checks).some(value => typeof value !== 'boolean')) throw new Error('체크 값을 확인해주세요.');
+        const invalidCheck = Object.entries(checks).some(([itemId, value]) =>
+          typeof value !== 'boolean' && (itemId === 'attendance' || !Number.isInteger(value) || value < 0 || value > WEEK_DAYS)
+        );
+        if (invalidCheck) throw new Error('체크 값을 확인해주세요.');
         records[studentId] = { ...records[studentId], ...checks, updatedAt: timestamp };
       }
       if (Object.keys(changes).length) transaction.set(attendanceRef, {year, date, groupId, records, updatedAt:timestamp}, {merge:true});

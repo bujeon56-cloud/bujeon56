@@ -3,16 +3,17 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {ref,computed,watch,reactive,nextTick} from 'vue';
 import * as fields from '../src/utils/studentFields.js';
+import {checkCount} from '../src/utils/attendanceChecks.js';
 
 test('deleted talents stay excluded in every month even if a student is reactivated',async()=>{
  const source=await readFile('src/stores/attendanceStore.js','utf8');
  const body=source.match(/async calculateMonthlyTalents\(year, monthStr\) \{([\s\S]*?)\n    \}/)[1];
- const records={removed:{attendance:true,prayer:true},kept:{attendance:true,prayer:true}};
+ const records={removed:{attendance:true,prayer:true},kept:{attendance:true,prayer:true,qt:4}};
  const data=[{year:'2026',date:'2026-10-25',records},{year:'2026',date:'2026-11-01',records},{year:'2025',date:'2025-10-26',records}];
- const church={students:[{id:'removed',active:true,talentsDeleted:true},{id:'kept',active:true}],checkItems:[{id:'attendance',points:2},{id:'prayer',points:5}]};
- const calculate=new Function('useChurchStore','DBService',`return async function(year,monthStr){${body}}`)(()=>church,{getAll:async()=>data});
+ const church={students:[{id:'removed',active:true,talentsDeleted:true},{id:'kept',active:true}],checkItems:[{id:'attendance',points:2},{id:'prayer',points:5},{id:'qt',points:3,maxDays:7}]};
+ const calculate=new Function('useChurchStore','DBService','checkCount',`return async function(year,monthStr){${body}}`)(()=>church,{getAll:async()=>data},checkCount);
  for(const month of ['2026-10','2026-11']){
-  const totals=await calculate('2026',month);assert.equal(totals.removed,undefined);assert.equal(totals.kept.points,7);assert.equal(totals.kept.attendanceCount,1);
+  const totals=await calculate('2026',month);assert.equal(totals.removed,undefined);assert.equal(totals.kept.points,19);assert.equal(totals.kept.attendanceCount,1);assert.equal(totals.kept.itemCounts.qt,4);
  }
  assert.equal(records.removed.attendance,true);assert.equal(records.kept.prayer,true);
 });

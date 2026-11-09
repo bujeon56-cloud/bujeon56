@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { recentSunday, sundayForYear } from '../utils/sundays.js';
+import { checkCount, checkItemMaxDays } from '../utils/attendanceChecks.js';
 import { DBService } from '../api/storage';
 import { useChurchStore } from './churchStore';
 
@@ -10,7 +11,7 @@ export const useAttendanceStore = defineStore('attendance', {
   state: () => ({
     selectedDate: getRecentSunday(),
     activeGroupKey: '',
-    records: {}, // { [studentId]: { [checkItemId]: boolean, updatedAt: string } }
+    records: {}, // Each check is a boolean or a day count.
     submission: null, // { submitted: true, submittedAt, submittedBy, notes }
     loading: false,
     saveStatus: 'idle', // 'idle' | 'saving' | 'saved' | 'error'
@@ -79,35 +80,44 @@ export const useAttendanceStore = defineStore('attendance', {
       }
     },
 
-    // 3. Realtime Checkbox Toggle & Auto Save
     async toggleCheck(year, groupId, studentId, checkItemId) {
+      return this.setCheck(year, groupId, studentId, checkItemId, !this.records[studentId]?.[checkItemId]);
+    },
+
+    async setCheck(year, groupId, studentId, checkItemId, value) {
       if (this.isReadOnly || this.loading || this.saveStatus === 'saving') {
         console.warn('Attendance is locked/submitted. Modification disabled.');
         return;
       }
 
-      const currentStudentChecks = this.records[studentId] ? { ...this.records[studentId] } : {};
-      const newValue = !currentStudentChecks[checkItemId];
-      currentStudentChecks[checkItemId] = newValue;
+      const item = useChurchStore().checkItems.find(item => item.id === checkItemId);
+      const maxDays = item ? checkItemMaxDays(item) : 0;
+      if (maxDays ? !Number.isInteger(value) || value < 0 || value > maxDays : typeof value !== 'boolean') {
+        throw new Error('체크 값을 확인해주세요.');
+      }
 
-      // Update local reactive state immediately
-      this.records = {
-        ...this.records,
-        [studentId]: currentStudentChecks
-      };
+      const date = this.selectedDate;
+      const context = this.activeGroupKey;
+      const previous = this.records[studentId];
+      this.records[studentId] = { ...previous, [checkItemId]: value };
 
       this.saveStatus = 'saving';
 
       try {
-        await DBService.saveStudentAttendance(year, this.selectedDate, groupId, studentId, currentStudentChecks);
+        const records = await DBService.saveStudentAttendance(year, date, groupId, studentId, { [checkItemId]: value });
+        if (this.activeGroupKey !== context) return;
+        this.records[studentId] = records[studentId];
         this.saveStatus = 'saved';
         setTimeout(() => {
-          if (this.saveStatus === 'saved') this.saveStatus = 'idle';
+          if (this.activeGroupKey === context && this.saveStatus === 'saved') this.saveStatus = 'idle';
         }, 2000);
       } catch (err) {
         console.error('Auto save error:', err);
-        this.records = { ...this.records, [studentId]: { ...currentStudentChecks, [checkItemId]: !newValue } };
-        this.saveStatus = 'error';
+        if (this.activeGroupKey === context) {
+          if (previous) this.records[studentId] = previous;
+          else delete this.records[studentId];
+          this.saveStatus = 'error';
+        }
         throw err;
       }
     },
@@ -118,16 +128,14 @@ export const useAttendanceStore = defineStore('attendance', {
       this.saveStatus = 'saving';
       const date = this.selectedDate;
       const context = year + '_' + date + '_' + groupId;
-      const previous = { ...this.records };
       try {
         if (!attended) {
           const records = await DBService.resetGroupAttendance(year, date, groupId, students, useChurchStore().checkItems);
           if (this.activeGroupKey === context) this.records = records;
         } else {
           for (const student of students) {
-            const current = {...(previous[student.id] || {}), attendance:true};
-            await DBService.saveStudentAttendance(year, date, groupId, student.id, current);
-            if (this.activeGroupKey === context) this.records[student.id] = current;
+            const records = await DBService.saveStudentAttendance(year, date, groupId, student.id, { attendance: true });
+            if (this.activeGroupKey === context) this.records[student.id] = records[student.id];
           }
         }
         if (this.activeGroupKey !== context) return;
@@ -220,14 +228,15 @@ export const useAttendanceStore = defineStore('attendance', {
           }
 
           checkItems.forEach(item => {
-            if (checks[item.id]) {
+            const count = checkCount(checks[item.id]);
+            if (count) {
               const itemPoints = Number(item.points) || 0;
-              studentPoints[studentId].points += itemPoints;
-              studentPoints[studentId].itemCounts[item.id] = (studentPoints[studentId].itemCounts[item.id] || 0) + 1;
+              studentPoints[studentId].points += itemPoints * count;
+              studentPoints[studentId].itemCounts[item.id] = (studentPoints[studentId].itemCounts[item.id] || 0) + count;
 
               if (item.id === 'attendance') studentPoints[studentId].attendanceCount += 1;
-              if (item.id === 'bibleReading') studentPoints[studentId].bibleCount += 1;
-              if (item.id === 'prayer') studentPoints[studentId].prayerCount += 1;
+              if (item.id === 'bibleReading') studentPoints[studentId].bibleCount += count;
+              if (item.id === 'prayer') studentPoints[studentId].prayerCount += count;
             }
           });
         });

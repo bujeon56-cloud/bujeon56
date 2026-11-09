@@ -197,12 +197,13 @@ export const useChurchStore = defineStore('church', {
     },
 
     // --- Check Items & Talent Points Management ---
-    async addCheckItem({ label, points = 2, color = 'blue' }) {
+    async addCheckItem({ label, points = 2, color = 'blue', maxDays = 0 }) {
       const id = `item_${Date.now()}`;
       const item = {
         id,
         label,
         points: Number(points),
+        maxDays,
         color,
         enabled: true,
         isDefault: false

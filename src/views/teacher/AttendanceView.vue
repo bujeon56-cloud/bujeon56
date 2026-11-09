@@ -217,38 +217,49 @@
 
         <!-- Big Touch Toggle Buttons for All Check Items -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-          <button
-            v-for="item in church.activeCheckItems"
-            :key="item.id"
-            type="button"
-            :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
-            @click="handleCheckToggle(student.id, item.id)"
-            class="min-h-[48px] py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm transition-all duration-150 flex items-center justify-between gap-2 border active:scale-95 disabled:active:scale-100 touch-manipulation cursor-pointer"
-            :class="[
-              isItemChecked(student.id, item.id)
-                ? getActivePillClass(item.id)
-                : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/80',
-              attendanceStore.isReadOnly ? 'cursor-not-allowed opacity-85' : ''
-            ]"
-          >
-            <div class="flex items-center gap-2">
-              <div
-                class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs"
-                :class="isItemChecked(student.id, item.id) ? 'bg-white/30 text-white' : 'bg-slate-200 text-slate-400'"
-              >
-                <Check v-if="isItemChecked(student.id, item.id)" class="w-4 h-4" />
-                <span v-else>•</span>
-              </div>
-              <span class="tracking-tight">{{ item.label }}</span>
+          <template v-for="item in church.activeCheckItems" :key="item.id">
+            <div v-if="checkItemMaxDays(item)" class="col-span-full space-y-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <span class="text-xs font-black sm:text-sm">{{ item.label }} <span class="text-[11px] text-amber-600">1일당 +{{ item.points }}</span></span>
+              <AttendanceDaySelect
+                :value="attendanceStore.records[student.id]?.[item.id]"
+                :max-days="checkItemMaxDays(item)"
+                :label="student.name + ' ' + item.label"
+                :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
+                @change="handleDayChange(student.id, item.id, $event)"
+              />
             </div>
-
-            <span
-              class="text-[11px] font-bold px-1.5 py-0.5 rounded-md"
-              :class="isItemChecked(student.id, item.id) ? 'bg-white/20 text-white' : 'text-slate-400'"
+            <button
+              v-else
+              type="button"
+              :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
+              @click="handleCheckToggle(student.id, item.id)"
+              class="min-h-[48px] py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm transition-all duration-150 flex items-center justify-between gap-2 border active:scale-95 disabled:active:scale-100 touch-manipulation cursor-pointer"
+              :class="[
+                isItemChecked(student.id, item.id)
+                  ? getActivePillClass(item.id)
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/80',
+                attendanceStore.isReadOnly ? 'cursor-not-allowed opacity-85' : ''
+              ]"
             >
-              +{{ item.points }}달란트
-            </span>
-          </button>
+              <div class="flex items-center gap-2">
+                <div
+                  class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs"
+                  :class="isItemChecked(student.id, item.id) ? 'bg-white/30 text-white' : 'bg-slate-200 text-slate-400'"
+                >
+                  <Check v-if="isItemChecked(student.id, item.id)" class="w-4 h-4" />
+                  <span v-else>•</span>
+                </div>
+                <span class="tracking-tight">{{ item.label }}</span>
+              </div>
+
+              <span
+                class="text-[11px] font-bold px-1.5 py-0.5 rounded-md"
+                :class="isItemChecked(student.id, item.id) ? 'bg-white/20 text-white' : 'text-slate-400'"
+              >
+                +{{ item.points }}달란트
+              </span>
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -266,7 +277,7 @@
               <th class="py-3 px-3 text-center" v-for="item in church.activeCheckItems" :key="item.id">
                 <div class="flex flex-col items-center">
                   <span class="font-bold">{{ item.label }}</span>
-                  <span class="text-[11px] text-amber-500 font-bold">(+{{ item.points }})</span>
+                  <span class="text-[11px] text-amber-500 font-bold">{{ checkItemMaxDays(item) ? '1일당 ' : '' }}+{{ item.points }}</span>
                 </div>
               </th>
               <th class="py-3 px-4 text-center w-24">달란트</th>
@@ -287,7 +298,17 @@
                 :key="item.id"
                 class="py-3.5 px-3 text-center"
               >
+                <AttendanceDaySelect
+                  v-if="checkItemMaxDays(item)"
+                  class="min-w-[13rem]"
+                  :value="attendanceStore.records[student.id]?.[item.id]"
+                  :max-days="checkItemMaxDays(item)"
+                  :label="student.name + ' ' + item.label"
+                  :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
+                  @change="handleDayChange(student.id, item.id, $event)"
+                />
                 <button
+                  v-else
                   type="button"
                   :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
                   @click="handleCheckToggle(student.id, item.id)"
@@ -395,12 +416,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useAuthStore } from '../../stores/authStore';
 import { useChurchStore } from '../../stores/churchStore';
 import { useAttendanceStore } from '../../stores/attendanceStore';
+import { DBService } from '../../api/storage';
 import confetti from 'canvas-confetti';
 import Modal from '../../components/Modal.vue';
+import AttendanceDaySelect from '../../components/AttendanceDaySelect.vue';
+import { checkCount, checkItemMaxDays } from '../../utils/attendanceChecks.js';
 import { gradeLabel } from '../../utils/studentFields.js';
 import {
   Calendar,
@@ -465,9 +489,15 @@ const loadData = async () => {
   }
 };
 
+let stopWatchingCheckItems;
 onMounted(() => {
   loadData();
+  stopWatchingCheckItems = DBService.watchCheckItems(
+    items => { church.checkItems = items; },
+    error => console.warn('Could not refresh attendance check items:', error)
+  );
 });
+onUnmounted(() => stopWatchingCheckItems?.());
 
 watch([() => attendanceStore.selectedDate, () => currentGroupId.value, () => church.currentYear], () => {
   loadData();
@@ -507,6 +537,11 @@ const handleCheckToggle = async (studentId, itemId) => {
   await attendanceStore.toggleCheck(church.currentYear, currentGroupId.value, studentId, itemId);
 };
 
+const handleDayChange = async (studentId, itemId, days) => {
+  if (!currentGroupId.value) return alert('선택한 연도에 반을 먼저 배정해주세요.');
+  await attendanceStore.setCheck(church.currentYear, currentGroupId.value, studentId, itemId, days);
+};
+
 // Styling for Active Pill Buttons
 const getActivePillClass = (itemId) => {
   if (itemId === 'attendance') return 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200';
@@ -534,9 +569,7 @@ const getStudentTodayTalents = (studentId) => {
   const checks = attendanceStore.records[studentId] || {};
   let sum = 0;
   church.activeCheckItems.forEach(item => {
-    if (checks[item.id]) {
-      sum += Number(item.points) || 0;
-    }
+    sum += checkCount(checks[item.id]) * (Number(item.points) || 0);
   });
   return sum;
 };

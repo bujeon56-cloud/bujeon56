@@ -16,10 +16,11 @@ test('phone display uses separators but student persistence keeps digits and lea
  assert.equal(raw.phone,'010-1234-5678');assert.deepEqual(normalizeStudentFields({notes:'수정'}),{notes:'수정'});
 });
 test('reset clears every checkbox, including custom and retired items, without mutating input',()=>{
- const before={s:{attendance:true,bibleReading:true,prayer:true,custom:true,retired:true,notes:'보존',updatedAt:'old'},inactive:{attendance:true,custom:true}};
- const cleared=clearedAttendance(before,[{id:'s'},{id:'new'}],[{id:'attendance'},{id:'newItem'}],'now');
+ const before={s:{attendance:true,bibleReading:true,prayer:true,custom:true,retired:true,qt:7,retiredDays:3,notes:'보존',updatedAt:'old'},inactive:{attendance:true,custom:true}};
+ const cleared=clearedAttendance(before,[{id:'s'},{id:'new'}],[{id:'attendance'},{id:'newItem'},{id:'qt',maxDays:7}],'now');
  for(const checks of Object.values(cleared))for(const value of Object.values(checks))if(typeof value==='boolean')assert.equal(value,false);
  assert.equal(cleared.s.notes,'보존');assert.equal(cleared.s.updatedAt,'now');assert.equal(cleared.new.newItem,false);assert.equal(before.s.custom,true);
+ assert.equal(cleared.s.qt,0);assert.equal(cleared.s.retiredDays,0);assert.equal(cleared.new.qt,0);assert.equal(before.s.qt,7);
 });
 test('cloud reset commits the whole target group once and leaves other groups untouched',async()=>{
  let source=await readFile('src/api/storage.js','utf8');
@@ -45,9 +46,13 @@ test('cloud reset commits the whole target group once and leaves other groups un
   for(const [ref,payload] of pending)docs[ref]={...docs[ref],...payload};
   return result;
  };
- const edited=await DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{attendance:true}},'수정 메모');
+ const edited=await DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{attendance:true,qt:5}},'수정 메모');
+ assert.equal(edited.s.qt,5);
  assert.equal(edited.s.attendance,true);assert.equal(edited.s.prayer,true);assert.equal(edited.s.custom,true);assert.equal(edited.s.notes,'학생 메모');assert.equal(edited.other.attendance,true);
  assert.equal(docs[submissionKey].submitted,true);assert.equal(docs[submissionKey].submittedAt,'original');assert.equal(docs[submissionKey].teacherId,'teacher');assert.equal(docs[submissionKey].notes,'수정 메모');
+ await assert.rejects(DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{qt:8}}),/체크 값을 확인/);
+ const teacherEdit=await DBService.saveStudentAttendance('2026','2026-10-25','g1','s',{qt:2});
+ assert.equal(teacherEdit.s.qt,2);assert.equal(teacherEdit.s.prayer,true);
  delete docs[submissionKey];
  await assert.rejects(DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{attendance:false}},'충돌'),/제출 상태가 변경/);
  assert.equal(docs[key].records.s.attendance,true);
@@ -62,6 +67,7 @@ test('reset action preserves locked records, failed writes and a newly selected 
  t.mock.timers.enable({apis:['setTimeout']});
  let source=await readFile('src/stores/attendanceStore.js','utf8');
  source=source.replace("from '../utils/sundays.js'",`from '${import.meta.resolve('../src/utils/sundays.js')}'`).replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`).replace(/import \{ DBService[^\n]+\n/, 'const DBService=globalThis.__resetAction;\n').replace(/import \{ useChurchStore[^\n]+\n/, "const useChurchStore=()=>({checkItems:[{id:'attendance'},{id:'prayer'}]});\n");
+ source=source.replace("from '../utils/attendanceChecks.js'",`from '${import.meta.resolve('../src/utils/attendanceChecks.js')}'`);
  let calls=0;
  const cleared={s:{attendance:false,prayer:false}};
  globalThis.__resetAction={resetGroupAttendance:async()=>{calls++;return cleared;}};

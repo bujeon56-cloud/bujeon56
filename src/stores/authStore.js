@@ -3,6 +3,12 @@ import { classLoginEmail } from '../utils/classAccounts.js';
 import { DBService, formatTeacherName } from '../api/storage';
 import { auth, authReady, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from '../api/firebase';
 
+const retryableSessionErrors = new Set([
+  'unavailable',
+  'deadline-exceeded',
+  'auth/network-request-failed'
+]);
+
 export function authErrorMessage(error) {
   if (error.code === 'permission-denied') return '데이터 접근 권한이 없습니다. 관리자 계정 등록과 Firestore 규칙을 확인해주세요.';
   const messages = {
@@ -45,14 +51,19 @@ export const useAuthStore = defineStore('auth', {
     },
     async initAuth() {
       this.loading = true;
-      localStorage.removeItem('bujeon_user_session');
+      this.error = null;
+      try {
+        localStorage.removeItem('bujeon_user_session');
+      } catch {
+        // Legacy storage cleanup should not prevent Firebase session restoration.
+      }
       try {
         await authReady;
         await this.loadProfile();
       } catch (error) {
         this.user = null;
         this.error = authErrorMessage(error);
-        await signOut(auth).catch(() => {});
+        if (!retryableSessionErrors.has(error.code)) await signOut(auth).catch(() => {});
       } finally { this.loading = false; }
     },
     async login(identifier, password) {
