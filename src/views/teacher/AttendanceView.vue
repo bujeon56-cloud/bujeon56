@@ -215,9 +215,9 @@
           </div>
         </div>
 
-        <!-- Big Touch Toggle Buttons for All Check Items -->
+        <!-- Show the student's activities after attendance is marked. -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-          <template v-for="item in church.activeCheckItems" :key="item.id">
+          <template v-for="item in visibleCheckItems(isAttended(student.id))" :key="item.id">
             <div v-if="checkItemMaxDays(item)" class="col-span-full space-y-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
               <span class="text-xs font-black sm:text-sm">{{ item.label }} <span class="text-[11px] text-amber-600">1일당 +{{ item.points }}</span></span>
               <AttendanceDaySelect
@@ -274,7 +274,7 @@
             <tr class="bg-slate-50/80 text-xs text-slate-600 font-bold border-b border-slate-200">
               <th class="py-3 px-3 text-center w-10">No</th>
               <th class="py-3 px-4 min-w-[110px]">이름</th>
-              <th class="py-3 px-3 text-center" v-for="item in church.activeCheckItems" :key="item.id">
+              <th class="py-3 px-3 text-center" v-for="item in tableCheckItems" :key="item.id">
                 <div class="flex flex-col items-center">
                   <span class="font-bold">{{ item.label }}</span>
                   <span class="text-[11px] text-amber-500 font-bold">{{ checkItemMaxDays(item) ? '1일당 ' : '' }}+{{ item.points }}</span>
@@ -294,12 +294,12 @@
               <td class="py-3.5 px-4 font-black text-slate-900">{{ student.name }}</td>
 
               <td
-                v-for="item in church.activeCheckItems"
+                v-for="item in tableCheckItems"
                 :key="item.id"
                 class="py-3.5 px-3 text-center"
               >
                 <AttendanceDaySelect
-                  v-if="checkItemMaxDays(item)"
+                  v-if="isAttended(student.id) && checkItemMaxDays(item)"
                   class="min-w-[13rem]"
                   :value="attendanceStore.records[student.id]?.[item.id]"
                   :max-days="checkItemMaxDays(item)"
@@ -308,7 +308,7 @@
                   @change="handleDayChange(student.id, item.id, $event)"
                 />
                 <button
-                  v-else
+                  v-else-if="item.id === 'attendance' || isAttended(student.id)"
                   type="button"
                   :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
                   @click="handleCheckToggle(student.id, item.id)"
@@ -563,6 +563,10 @@ const markAllAttendance = async (val) => {
 const todayAttendedCount = computed(() => {
   return groupStudents.value.filter(s => isAttended(s.id)).length;
 });
+
+const attendanceOnlyItems = computed(() => church.activeCheckItems.filter(item => item.id === 'attendance'));
+const visibleCheckItems = attended => attended ? church.activeCheckItems : attendanceOnlyItems.value;
+const tableCheckItems = computed(() => visibleCheckItems(todayAttendedCount.value > 0));
 
 // Calculate talent for a single student today
 const getStudentTodayTalents = (studentId) => {
