@@ -133,7 +133,7 @@
       <button
         @click="markAllAttendance(false)"
         :disabled="attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
-        class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 active:scale-[0.98] text-slate-600 rounded-xl text-xs sm:text-sm font-bold transition"
+        class="py-2.5 px-3 bg-red-600 text-white enabled:hover:bg-red-700 enabled:active:scale-[0.98] disabled:opacity-50 rounded-xl text-xs sm:text-sm font-bold transition"
         title="이 반의 출석·달란트 전체 체크 해제"
       >
         초기화
