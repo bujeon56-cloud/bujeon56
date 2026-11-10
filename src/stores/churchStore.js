@@ -4,7 +4,7 @@ import { normalizeStudentFields, compareStudentNames } from '../utils/studentFie
 import { compareGroups } from '../utils/groupOrder.js';
 import { isInAttendanceStats, isOnAttendanceRoster, newcomerAttendanceUpdate } from '../utils/newcomers.js';
 import { DBService } from '../api/storage';
-import { teachersForYear, yearRemovalPlan, teacherGroupForYear } from '../utils/teacherYears.js';
+import { activeAttendanceYear, teachersForYear, yearRemovalPlan, teacherGroupForYear } from '../utils/teacherYears.js';
 import { auth, db, doc, runTransaction, writeBatch, arrayUnion, createStaffAccount } from '../api/firebase';
 import { useAuthStore } from './authStore';
 
@@ -92,7 +92,7 @@ export const useChurchStore = defineStore('church', {
         this.years = years.length > 0 ? years : [{ id: this.currentYear, title: `${this.currentYear}년도`, isCurrent: true }];
         
         // Find current year
-        const currentYearObj = this.years.find(y => y.isCurrent) || this.years[0];
+        const currentYearObj = activeAttendanceYear(this.years);
         if (currentYearObj) {
           this.currentYear = currentYearObj.id;
         }
@@ -113,6 +113,25 @@ export const useChurchStore = defineStore('church', {
     // Set Current Year
     setYear(year) {
       this.currentYear = year;
+    },
+
+    async activateYear(yearId) {
+      if (!useAuthStore().isAdmin) throw new Error('관리자만 활성 연도를 변경할 수 있습니다.');
+      const years = await runTransaction(db, async transaction => {
+        const registered = await DBService.getAll('years');
+        const snapshots = await Promise.all(registered.map(year => transaction.get(doc(db, 'years', year.id))));
+        const currentYears = snapshots.filter(snapshot => snapshot.exists());
+        if (!currentYears.some(snapshot => snapshot.id === yearId)) throw new Error('전환할 연도를 찾을 수 없습니다.');
+
+        return currentYears.map(snapshot => {
+          const data = snapshot.data();
+          const isCurrent = snapshot.id === yearId;
+          if (Boolean(data.isCurrent) !== isCurrent) transaction.update(snapshot.ref, { isCurrent });
+          return { ...data, id: snapshot.id, isCurrent };
+        });
+      });
+      this.years = years;
+      this.setYear(yearId);
     },
 
     // Add New Year

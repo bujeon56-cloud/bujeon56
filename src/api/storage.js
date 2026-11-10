@@ -8,6 +8,7 @@ import {
   setDoc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   updateDoc,
   deleteDoc,
   query,
@@ -303,7 +304,7 @@ export const DBService = {
     return isFirebaseConfigured && db !== null;
   },
 
-  async getAll(colName, filters = []) {
+  async getAll(colName, filters = [], { serverOnly = false } = {}) {
     if (this.isUsingCloud()) {
       try {
         let q = collection(db, colName);
@@ -311,7 +312,7 @@ export const DBService = {
           const constraints = filters.map(f => where(f.field, f.op, f.value));
           q = query(q, ...constraints);
         }
-        const snap = await getDocs(q);
+        const snap = await (serverOnly ? getDocsFromServer(q) : getDocs(q));
         return snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       } catch (err) {
         console.warn(`Firestore getAll ${colName} error:`, err);
@@ -319,6 +320,7 @@ export const DBService = {
       }
     }
 
+    if (serverOnly) throw Object.assign(new Error('공용 DB 연결을 확인해주세요.'), { code: 'unavailable' });
     const items = getLocalCollection(colName);
     if (!Array.isArray(items)) return [];
     

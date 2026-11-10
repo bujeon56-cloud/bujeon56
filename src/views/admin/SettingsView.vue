@@ -103,11 +103,12 @@
             새로운 해가 시작될 때 새 연도를 개설하고 목장 및 출석부를 연도별로 독립적으로 관리합니다.
           </p>
           <p class="text-xs text-slate-500 mt-1">연결된 데이터가 없는 연도만 삭제할 수 있으며, 최소 한 연도를 유지해야 합니다.</p>
+          <p class="text-xs text-slate-500 mt-1">연도 전환으로 지정한 활성 연도는 반 계정이 다시 로그인할 때 적용됩니다.</p>
         </div>
 
         <button 
           @click="openAddYearModal"
-          :disabled="deletingYear"
+          :disabled="deletingYear || !!switchingYear"
           class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-100 transition flex items-center gap-1.5 flex-shrink-0"
         >
           <Plus class="w-4 h-4" />
@@ -116,6 +117,8 @@
       </div>
 
       <div class="p-5">
+        <p v-if="yearSwitchNotice" role="status" class="mb-3 text-sm text-emerald-700">{{ yearSwitchNotice }}</p>
+        <p v-if="yearSwitchError" role="alert" class="mb-3 text-sm text-rose-700">{{ yearSwitchError }}</p>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div 
             v-for="y in church.years" 
@@ -136,12 +139,13 @@
             </div>
 
             <div class="flex flex-wrap justify-end gap-1.5">
-              <button v-if="church.currentYear !== y.id" type="button" @click="church.setYear(y.id)"
-                class="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-50 rounded-xl transition">
-                연도 전환
+              <button v-if="!y.isCurrent" type="button" :aria-label="`${y.id}년도 연도 전환`"
+                :disabled="!!switchingYear || creatingYear || deletingYear" @click="switchActiveYear(y.id)"
+                class="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-50 rounded-xl transition disabled:opacity-50">
+                {{ switchingYear === y.id ? '전환 중…' : '연도 전환' }}
               </button>
               <button type="button" :aria-label="`${y.id}년도 출석부 삭제`"
-                :disabled="church.years.length <= 1 || getYearGroupsCount(y.id) > 0 || creatingYear || deletingYear"
+                :disabled="church.years.length <= 1 || getYearGroupsCount(y.id) > 0 || creatingYear || deletingYear || !!switchingYear"
                 @click="openDeleteYear(y.id)"
                 class="inline-flex items-center gap-1 rounded-xl border border-rose-200 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-40">
                 <Trash2 class="h-3.5 w-3.5" aria-hidden="true" /> 삭제
@@ -300,6 +304,9 @@ const copyPreviousGroups = ref(false);
 const yearToDelete = ref('');
 const deletingYear = ref(false);
 const deleteYearError = ref('');
+const switchingYear = ref('');
+const yearSwitchNotice = ref('');
+const yearSwitchError = ref('');
 const showDeleteYearModal = computed({
   get: () => Boolean(yearToDelete.value),
   set: visible => { if (!visible && !deletingYear.value) yearToDelete.value = ''; }
@@ -364,6 +371,21 @@ const confirmDeleteCheckItem = async (item) => {
 };
 
 // Year Actions
+async function switchActiveYear(yearId) {
+  if (switchingYear.value || creatingYear.value || deletingYear.value) return;
+  switchingYear.value = yearId;
+  yearSwitchNotice.value = '';
+  yearSwitchError.value = '';
+  try {
+    await church.activateYear(yearId);
+    yearSwitchNotice.value = `${yearId}년을 활성 연도로 변경했습니다.`;
+  } catch (error) {
+    yearSwitchError.value = error.message || '연도 전환에 실패했습니다.';
+  } finally {
+    switchingYear.value = '';
+  }
+}
+
 function openDeleteYear(yearId) {
   deleteYearError.value = '';
   yearToDelete.value = yearId;

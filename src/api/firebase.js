@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, deleteApp } from 'firebase/app';
 import { isProtectedAccount } from '../utils/protectedAccounts.js';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, runTransaction, writeBatch, arrayUnion } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, getDocsFromServer, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, runTransaction, writeBatch, arrayUnion } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, inMemoryPersistence, createUserWithEmailAndPassword, sendPasswordResetEmail, deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 
 // Firebase web configuration is public. Access is enforced by Auth and Firestore rules.
@@ -61,4 +61,4 @@ export async function createStaffAccount(email, password, saveProfile) {
   }
 }
 
-export { app, db, auth, authReady, isFirebaseConfigured, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, runTransaction, writeBatch, arrayUnion, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword };
+export { app, db, auth, authReady, isFirebaseConfigured, collection, doc, setDoc, getDoc, getDocs, getDocsFromServer, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, runTransaction, writeBatch, arrayUnion, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword };

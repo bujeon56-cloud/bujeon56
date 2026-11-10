@@ -11,7 +11,18 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  const fakeAuth={currentUser:null,app:{options:{projectId:'test-project'}}};
  let profile={role:'teacher', name:'교사', id:'firebase-uid'};
  let profileError;
- const db={getOne:async (col,id)=>{assert.equal(col,'users');assert.equal(id,'firebase-uid');if(profileError) throw profileError;return profile;}};
+ let activeYear='2026';
+ const assignedGroups=[{year:'2026',teacherId:'firebase-uid',id:'g1'}];
+ const db={
+   getOne:async (col,id)=>{assert.equal(col,'users');assert.equal(id,'firebase-uid');if(profileError) throw profileError;return profile;},
+   getAll:async (col,filters,options)=>{
+     assert.deepEqual(options,{serverOnly:true});
+     if(col==='years') return [{id:'2026',isCurrent:activeYear==='2026'},{id:'2027',isCurrent:activeYear==='2027'}];
+     assert.equal(col,'groups');
+     assert.deepEqual(filters,[{field:'teacherId',op:'==',value:'firebase-uid'}]);
+     return assignedGroups;
+   }
+ };
  globalThis.__authTest={DBService:db,formatTeacherName:name=>name,auth:fakeAuth,authReady:Promise.resolve(),
    signInWithEmailAndPassword:async (auth,email,password)=>{
      assert.equal(email,expectedEmail);
@@ -21,7 +32,9 @@ test('Firebase Auth identity controls login and session restoration; demo creden
    signOut:async auth=>{signedOut++;auth.currentUser=null;},sendPasswordResetEmail:async()=>{}};
  const transformed=source.replace(/import \{ DBService[^\n]+\n/,'').replace(/import \{ auth,[^\n]+\n/,`const {DBService,formatTeacherName,auth,authReady,signInWithEmailAndPassword,signOut,sendPasswordResetEmail}=globalThis.__authTest;\n`);
  // Relative Pinia import is resolved by an absolute file URL in the in-memory module.
- const code=transformed.replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`).replace("from '../utils/classAccounts.js'",`from '${import.meta.resolve('../src/utils/classAccounts.js')}'`);
+ const code=transformed.replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`)
+   .replace("from '../utils/classAccounts.js'",`from '${import.meta.resolve('../src/utils/classAccounts.js')}'`)
+   .replace("from '../utils/teacherYears.js'",`from '${import.meta.resolve('../src/utils/teacherYears.js')}'`);
  const {useAuthStore}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
  setActivePinia(createPinia()); const store=useAuthStore();
  await store.initAuth(); assert.equal(store.user,null); assert.equal(stored.has('bujeon_user_session'),false);
@@ -42,11 +55,21 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  expectedEmail='bujeon56@accounts.bujeon56.invalid';
  await store.login('bujeon56','proper-password');
  assert.equal(store.isAdmin,false);
+ activeYear='2027';
+ await restoredStore.initAuth();
+ assert.equal(restoredStore.user,null);
+ assert.equal(fakeAuth.currentUser,null);
+ assert.match(restoredStore.error,/2027년도에 배정된 반이 없습니다/);
+ await assert.rejects(store.login('bujeon56','proper-password'),/2027년도에 배정된 반이 없습니다/);
+ assert.equal(fakeAuth.currentUser,null);
  profile={...profile,role:'admin'};
  await store.login('bujeon56','proper-password');
  assert.equal(store.isAdmin,true);
  profile={...profile,role:'teacher'};
  expectedEmail='teacher@example.com';
+ assignedGroups.push({year:'2027',teacherId:'firebase-uid',id:'g2'});
+ await store.login('teacher@example.com','proper-password');
+ assert.equal(store.isTeacher,true);
  await store.logout(); assert.equal(store.user,null);
  await restoredStore.initAuth(); assert.equal(restoredStore.user,null);
  denyLogin=true;

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { classLoginEmail } from '../utils/classAccounts.js';
+import { activeAttendanceYear, teacherGroupForYear } from '../utils/teacherYears.js';
 import { DBService, formatTeacherName } from '../api/storage';
 import { auth, authReady, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from '../api/firebase';
 
@@ -37,16 +38,28 @@ export const useAuthStore = defineStore('auth', {
   },
   actions: {
     async loadProfile() {
-      if (!auth.currentUser) { this.user = null; return null; }
-      const profile = await DBService.getOne('users', auth.currentUser.uid);
-      const location = '프로젝트 ' + auth.app.options.projectId + ' / 기본(default) DB / users/' + auth.currentUser.uid;
+      const uid = auth.currentUser?.uid;
+      if (!uid) { this.user = null; return null; }
+      const profile = await DBService.getOne('users', uid);
+      const location = '프로젝트 ' + auth.app.options.projectId + ' / 기본(default) DB / users/' + uid;
       if (!profile) {
         throw new Error('교직원 문서가 없습니다. 확인할 위치: ' + location);
       }
       if (!['admin', 'teacher'].includes(profile.role)) {
         throw new Error('교직원 문서는 있으나 role 값이 올바르지 않습니다. 현재 값: ' + JSON.stringify(profile.role ?? null) + '. 문자열 admin 또는 teacher가 필요합니다. 확인할 위치: ' + location);
       }
-      this.user = { ...profile, id: auth.currentUser.uid };
+      if (profile.role === 'teacher') {
+        const [years, groups] = await Promise.all([
+          DBService.getAll('years', [], { serverOnly: true }),
+          DBService.getAll('groups', [{ field: 'teacherId', op: '==', value: uid }], { serverOnly: true })
+        ]);
+        const year = activeAttendanceYear(years);
+        if (!year || !teacherGroupForYear(groups, year.id, uid)) {
+          const label = year ? `${year.id}년도` : '활성 연도';
+          throw new Error(`${label}에 배정된 반이 없습니다. 관리자에게 반 배정을 요청해주세요.`);
+        }
+      }
+      this.user = { ...profile, id: uid };
       return this.user;
     },
     async initAuth() {

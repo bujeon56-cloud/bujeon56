@@ -1,5 +1,9 @@
 import { compareGroups } from './groupOrder.js';
 
+export function activeAttendanceYear(years) {
+  return years.find(year => year.isCurrent) || years[0];
+}
+
 export function teacherGroupForYear(groups, year, teacherId) {
   return groups.filter(group => group.year === year && group.teacherId === teacherId).sort(compareGroups)[0] || null;
 }
