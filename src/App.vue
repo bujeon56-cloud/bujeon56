@@ -4,7 +4,7 @@
       <span>{{ error }}</span><button @click="error = ''" aria-label="오류 안내 닫기">닫기</button>
     </div>
     <router-view />
-    <PwaInstallPrompt />
+    <PwaInstallPrompt v-show="$route.name === 'Login'" />
   </div>
 </template>
 
