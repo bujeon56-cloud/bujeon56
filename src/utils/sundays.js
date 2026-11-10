@@ -20,10 +20,13 @@ export function sundayForYear(year,preferred) {
   if(calendarDate(preferred) && preferred.slice(0,4)===String(year))return dates.filter(date=>date<=preferred).at(-1)||dates[0];
   return dates[0]||'';
 }
-export function recentSunday(date=new Date()) {
+export function seoulDate(date=new Date()) {
   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
   const part=type=>parts.find(part=>part.type===type).value;
-  const calendar=calendarDate(part('year')+'-'+part('month')+'-'+part('day'));
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+export function recentSunday(date=new Date()) {
+  const calendar=calendarDate(seoulDate(date));
   calendar.setUTCDate(calendar.getUTCDate()-calendar.getUTCDay());
   return iso(calendar);
 }

@@ -57,6 +57,7 @@
           </span>
         </div>
 
+        <UserManual />
         <PasswordChange />
         <!-- Logout Button (Large Touch Area) -->
         <button 
@@ -79,6 +80,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
 import { useChurchStore } from '../stores/churchStore';
 import PasswordChange from './PasswordChange.vue';
+import UserManual from './UserManual.vue';
 import { Church, LogOut } from 'lucide-vue-next';
 const auth = useAuthStore();
 const church = useChurchStore();

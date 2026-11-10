@@ -167,6 +167,41 @@ export const useChurchStore = defineStore('church', {
       return yearObj;
     },
 
+    async deleteYear(yearId) {
+      if (!useAuthStore().isAdmin) throw new Error('관리자만 연도별 출석부를 삭제할 수 있습니다.');
+      const years = await DBService.getAll('years');
+      if (!years.some(year => year.id === yearId)) throw new Error('삭제할 연도를 찾을 수 없습니다.');
+      const remaining = years.filter(year => year.id !== yearId).sort((a, b) => b.id.localeCompare(a.id));
+      const fallback = remaining.find(year => year.isCurrent) || remaining[0];
+      if (!fallback) throw new Error('마지막 연도는 삭제할 수 없습니다.');
+
+      const [groups, students, attendances, submissions, users] = await Promise.all([
+        ...['groups', 'students', 'attendances', 'submissions'].map(collection =>
+          DBService.getAll(collection, [{ field: 'year', op: '==', value: yearId }])
+        ),
+        DBService.getAll('users')
+      ]);
+      if (groups.length || students.length || attendances.length || submissions.length || teachersForYear(users, [], yearId).length) {
+        throw new Error('목장, 학생, 교사 또는 출석 기록이 있는 연도는 삭제할 수 없습니다.');
+      }
+
+      const nextActive = await runTransaction(db, async transaction => {
+        const target = doc(db, 'years', yearId);
+        const replacement = doc(db, 'years', fallback.id);
+        const [targetSnapshot, fallbackSnapshot] = await Promise.all([transaction.get(target), transaction.get(replacement)]);
+        if (!targetSnapshot.exists() || !fallbackSnapshot.exists()) {
+          throw new Error('연도 목록이 변경되었습니다. 새로고침한 뒤 다시 시도해주세요.');
+        }
+        const activateFallback = targetSnapshot.data().isCurrent === true;
+        if (activateFallback) transaction.set(replacement, { isCurrent: true }, { merge: true });
+        transaction.delete(target);
+        return activateFallback;
+      });
+
+      this.years = remaining.map(year => nextActive ? { ...year, isCurrent: year.id === fallback.id } : year);
+      if (this.currentYear === yearId) this.currentYear = fallback.id;
+    },
+
     // --- Groups (목장) Management ---
     async addGroup({ departmentId, name, order, teacherId = null, teacherName = '미배정' }) {
       const deptName = departmentId === 'part1' ? '1부' : '2부';

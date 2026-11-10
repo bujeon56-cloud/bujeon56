@@ -102,10 +102,12 @@
           <p class="text-xs text-slate-500 mt-1">
             새로운 해가 시작될 때 새 연도를 개설하고 목장 및 출석부를 연도별로 독립적으로 관리합니다.
           </p>
+          <p class="text-xs text-slate-500 mt-1">연결된 데이터가 없는 연도만 삭제할 수 있으며, 최소 한 연도를 유지해야 합니다.</p>
         </div>
 
         <button 
-          @click="openAddYearModal" 
+          @click="openAddYearModal"
+          :disabled="deletingYear"
           class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-100 transition flex items-center gap-1.5 flex-shrink-0"
         >
           <Plus class="w-4 h-4" />
@@ -124,7 +126,7 @@
             <div>
               <div class="flex items-center gap-2">
                 <span class="font-extrabold text-base text-slate-900">{{ y.title || y.id + '년도' }}</span>
-                <span v-if="church.currentYear === y.id" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-600 text-white">
+                <span v-if="y.isCurrent" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-600 text-white">
                   현재 활성
                 </span>
               </div>
@@ -133,17 +135,35 @@
               </div>
             </div>
 
-            <button 
-              v-if="church.currentYear !== y.id"
-              @click="church.setYear(y.id)" 
-              class="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-50 rounded-xl transition"
-            >
-              연도 전환
-            </button>
+            <div class="flex flex-wrap justify-end gap-1.5">
+              <button v-if="church.currentYear !== y.id" type="button" @click="church.setYear(y.id)"
+                class="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-50 rounded-xl transition">
+                연도 전환
+              </button>
+              <button type="button" :aria-label="`${y.id}년도 출석부 삭제`"
+                :disabled="church.years.length <= 1 || getYearGroupsCount(y.id) > 0 || creatingYear || deletingYear"
+                @click="openDeleteYear(y.id)"
+                class="inline-flex items-center gap-1 rounded-xl border border-rose-200 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-40">
+                <Trash2 class="h-3.5 w-3.5" aria-hidden="true" /> 삭제
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <Modal v-model="showDeleteYearModal" title="연도별 출석부 삭제">
+      <p class="text-sm text-slate-700"><strong>{{ yearToDelete }}년도 출석부</strong>를 삭제하시겠습니까?</p>
+      <p v-if="church.years.some(year => year.id === yearToDelete && year.isCurrent)" class="text-xs text-slate-600">현재 활성 연도를 삭제하면 남아 있는 연도 중 가장 최근 연도가 활성화됩니다.</p>
+      <p v-if="deleteYearError" role="alert" class="text-sm text-rose-700">{{ deleteYearError }}</p>
+      <template #footer>
+        <button type="button" :disabled="deletingYear" class="rounded-xl px-4 py-2 text-sm font-bold" @click="showDeleteYearModal = false">취소</button>
+        <button type="button" :disabled="deletingYear" @click="confirmDeleteYear"
+          class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+          {{ deletingYear ? '삭제 중…' : '삭제하기' }}
+        </button>
+      </template>
+    </Modal>
 
     <!-- Check Item Add/Edit Modal -->
     <Modal v-model="showItemModal" :title="isEditingItem ? '체크 항목 수정' : '새 체크 항목 추가'">
@@ -277,6 +297,13 @@ const creatingYear = ref(false);
 const duplicateYear = computed(() => church.years.some(year => String(year.id) === String(newYearInput.value).trim()));
 const validYear = computed(() => /^20\d{2}$/.test(String(newYearInput.value).trim()));
 const copyPreviousGroups = ref(false);
+const yearToDelete = ref('');
+const deletingYear = ref(false);
+const deleteYearError = ref('');
+const showDeleteYearModal = computed({
+  get: () => Boolean(yearToDelete.value),
+  set: visible => { if (!visible && !deletingYear.value) yearToDelete.value = ''; }
+});
 
 const getItemColorClass = (item) => {
   if (item.id === 'attendance') return 'bg-emerald-50 text-emerald-600';
@@ -337,6 +364,25 @@ const confirmDeleteCheckItem = async (item) => {
 };
 
 // Year Actions
+function openDeleteYear(yearId) {
+  deleteYearError.value = '';
+  yearToDelete.value = yearId;
+}
+
+async function confirmDeleteYear() {
+  if (!yearToDelete.value || deletingYear.value || creatingYear.value) return;
+  deletingYear.value = true;
+  deleteYearError.value = '';
+  try {
+    await church.deleteYear(yearToDelete.value);
+    yearToDelete.value = '';
+  } catch (error) {
+    deleteYearError.value = error.message || '연도 삭제에 실패했습니다.';
+  } finally {
+    deletingYear.value = false;
+  }
+}
+
 const openAddYearModal = () => {
   copyPreviousGroups.value = false;
   newYearInput.value = Number(church.currentYear) + 1;

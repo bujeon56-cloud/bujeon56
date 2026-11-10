@@ -27,6 +27,39 @@ test('year list includes assigned, unassigned and legacy class accounts but excl
  assert.deepEqual(teachersForYear(teachers,groups,'2026').map(t=>t.id),['shared','unassigned','class']);
  assert.deepEqual(teachersForYear(teachers,groups,'2025').map(t=>t.id),['shared','old']);
 });
+
+test('year deletion protects existing records and activates the newest remaining year', async () => {
+ const source = await readFile('src/stores/churchStore.js', 'utf8');
+ const body = source.match(/async deleteYear\(yearId\) \{([\s\S]*?)\n    \},/)[1];
+ const years = [{id:'2025'},{id:'2026'},{id:'2027',isCurrent:true}];
+ const related = {};
+ const writes = [];
+ const account = {isAdmin:false};
+ const transaction = {
+   get:async id => ({exists:()=>years.some(year=>year.id===id),data:()=>years.find(year=>year.id===id)}),
+   set:(id,fields)=>writes.push([id,fields]), delete:id=>writes.push(id)
+ };
+ const remove = new Function('DBService','db','doc','runTransaction','useAuthStore','teachersForYear',
+   `return async function(yearId){${body}}`)(
+   {getAll:async collection=>collection==='years'?years:related[collection]||[]},
+   {},(_db,_col,id)=>id,async(_db,fn)=>fn(transaction),()=>account,teachersForYear
+ );
+ const state = {years:[...years],currentYear:'2027'};
+ await assert.rejects(remove.call(state,'2027'),/관리자만/);
+ account.isAdmin = true;
+ related.attendances = [{year:'2027'}];
+ await assert.rejects(remove.call(state,'2027'),/출석 기록/);
+ assert.deepEqual(writes,[]);
+ assert.equal(state.currentYear,'2027');
+ delete related.attendances;
+ await remove.call(state,'2027');
+ assert.deepEqual(writes,[['2026',{isCurrent:true}],'2027']);
+ assert.deepEqual(state.years.map(year=>year.id),['2026','2025']);
+ assert.equal(state.currentYear,'2026');
+ years.splice(0,years.length,{id:'2026',isCurrent:true});
+ await assert.rejects(remove.call(state,'2026'),/마지막 연도/);
+ assert.equal(writes.length,2);
+});
 test('bulk removal affects only selected-year assignments and retains other-year membership',()=>{
  const plan=yearRemovalPlan(teachers,groups,'2026',['shared','class','shared'],'admin');
  assert.equal(plan.length,2);assert.deepEqual(plan[0].groups.map(g=>g.id),['b']);
