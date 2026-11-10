@@ -142,19 +142,19 @@ async function exportReport(format) {
   }
 
   const filename = `${attendance.selectedDate}_출석통계`;
-  const sheet = attendanceExportSheet({
+  const report = {
     title: `${dateLabel.value} 출석부 출석 통계`, rowPairs: rowPairs.value, parts: parts.value,
     totals: totals.value, noteLabels, milestoneNames: milestoneNames.value, notes: notes.value,
     unclassifiedCount: unclassifiedCount.value
-  });
+  };
   exporting.value = true;
   try {
     const XLSX = await import('xlsx');
     if (format === 'excel') {
-      writeAttendanceExcel(XLSX, sheet, filename);
+      writeAttendanceExcel(XLSX, attendanceExportSheet(report), filename);
     } else {
       const { createAttendanceHwp } = await import('../utils/attendanceHwp.js');
-      const data = createAttendanceHwp(XLSX.CFB, sheet);
+      const data = createAttendanceHwp(XLSX.CFB, report);
       const url = URL.createObjectURL(new Blob([data], { type: 'application/x-hwp' }));
       const link = document.createElement('a');
       link.href = url;

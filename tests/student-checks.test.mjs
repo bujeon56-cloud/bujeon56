@@ -13,11 +13,12 @@ import {isInAttendanceStats, isOnAttendanceRoster, newcomerAttendanceUpdate, stu
 test('attendance exports preserve numeric totals and Korean milestone notes', () => {
  const first = {male:1,female:2,total:3};
  const second = {male:0,female:1,total:1};
- const sheet = attendanceExportSheet({
+ const report = {
    title:'11/01 출석부 출석 통계', rowPairs:[], parts:[{totals:first},{totals:second}],
    totals:{male:1,female:3,total:4}, noteLabels:['4주 등반','8주 등반','새친구'],
    milestoneNames:[['테스트 이름','',''],['','','']], notes:['직접 입력'], unclassifiedCount:0
- });
+ };
+ const sheet = attendanceExportSheet(report);
  assert.deepEqual(sheet.rows[2],['총계',1,2,3,'총계',0,1,1]);
  assert.equal(sheet.rows[4][1],'테스트 이름\n직접 입력');
  writeAttendanceExcel({...XLSX,writeFile(workbook, filename){
@@ -26,7 +27,7 @@ test('attendance exports preserve numeric totals and Korean milestone notes', ()
    assert.equal(result.Sheets['출석 통계'].D3.v,3);
    assert.equal(result.Sheets['출석 통계'].B5.v,'테스트 이름\n직접 입력');
  }},sheet,'report');
- const hwp = XLSX.CFB.read(createAttendanceHwp(XLSX.CFB,sheet),{type:'array'});
+ const hwp = XLSX.CFB.read(createAttendanceHwp(XLSX.CFB,report),{type:'array'});
  const header = Buffer.from(XLSX.CFB.find(hwp,'/FileHeader').content);
  const body = Buffer.from(XLSX.CFB.find(hwp,'/BodyText/Section0').content);
  assert.equal(header.subarray(0,17).toString(),'HWP Document File');
@@ -34,21 +35,22 @@ test('attendance exports preserve numeric totals and Korean milestone notes', ()
  assert.ok(body.includes(Buffer.from('직접 입력','utf16le')));
 });
 
-test('full-size HWP reports leave empty cell paragraphs without a text record', () => {
- const rows = [['출석 통계'], ['1부','남','여','합','2부','남','여','합']];
- for (let group = 1; group <= 21; group++) rows.push([group,2,'',2]);
- const hwp = XLSX.CFB.read(createAttendanceHwp(XLSX.CFB,{rows,merges:[]}),{type:'array'});
+test('HWP retains the template tables and places overflow groups on another page', () => {
+ const totals = {male:30,female:0,total:30};
+ const rowPairs = Array.from({length:15},(_,index)=>[{label:`반${index+1}`,male:2,total:2,hasMale:true}]);
+ const report = {title:'출석 통계',rowPairs,parts:[{totals},{totals:{male:0,female:0,total:0}}],totals,noteLabels:[],milestoneNames:[],notes:[]};
+ const hwp = XLSX.CFB.read(createAttendanceHwp(XLSX.CFB,report),{type:'array'});
  const body = Buffer.from(XLSX.CFB.find(hwp,'/BodyText/Section0').content);
- let tableRows;
+ const overflow = Buffer.from(XLSX.CFB.find(hwp,'/BodyText/Section1').content);
+ const tables = [];
  let emptyCells = 0;
- let lastParagraph;
  for (let offset = 0; offset < body.length;) {
    const header = body.readUInt32LE(offset);
    offset += 4;
    const tag = header & 1023;
    const level = (header >>> 10) & 1023;
    const size = header >>> 20;
-   if (tag === 77) tableRows = body.readUInt16LE(offset + 4);
+   if (tag === 77) tables.push([body.readUInt16LE(offset + 4),body.readUInt16LE(offset + 6)]);
    if (tag === 66) {
      const length = body.readUInt32LE(offset);
      const nextTag = body.readUInt32LE(offset + size) & 1023;
@@ -56,13 +58,14 @@ test('full-size HWP reports leave empty cell paragraphs without a text record', 
        assert.equal(nextTag,68);
        emptyCells++;
      }
-     if (level === 0) lastParagraph = length;
    }
    offset += size;
  }
- assert.equal(tableRows,22);
- assert.equal(emptyCells,105);
- assert.equal(lastParagraph,0x80000001);
+ assert.deepEqual(tables,[[3,4],[17,8],[2,3]]);
+ assert.ok(emptyCells > 0);
+ assert.ok(body.includes(Buffer.from('반14','utf16le')));
+ assert.ok(!body.includes(Buffer.from('반15','utf16le')));
+ assert.ok(overflow.includes(Buffer.from('반15','utf16le')));
 });
 
 test('newcomers join the regular roster on their eighth distinct Sunday', () => {

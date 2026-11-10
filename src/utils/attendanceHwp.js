@@ -1,5 +1,12 @@
-// HWP 5.0 records, per Hancom's published file format. The bundled styles contain no report text.
+// The template stores the reference HWP's page and table records with its report data removed.
 import styles from './attendanceHwpStyles.json' with { type: 'json' };
+import { attendanceRowCells, attendanceNoteCells } from './attendanceReportExport.js';
+
+const GROUP_ROWS_PER_PAGE = 14;
+const PARA_HEADER = 66;
+const PARA_TEXT = 67;
+const CELL = 72;
+const TABLE = 77;
 
 const bytes = key => Uint8Array.from(atob(styles[key]), char => char.charCodeAt(0));
 const view = data => new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -21,6 +28,24 @@ function utf16(text) {
   return data;
 }
 
+function records(data) {
+  const result = [];
+  const source = view(data);
+  for (let offset = 0; offset < data.length;) {
+    const start = offset;
+    const header = source.getUint32(offset, true);
+    offset += 4;
+    let size = header >>> 20;
+    if (size === 4095) {
+      size = source.getUint32(offset, true);
+      offset += 4;
+    }
+    const payload = data.subarray(offset, offset += size);
+    result.push({ tag: header & 1023, level: (header >>> 10) & 1023, payload, raw: data.subarray(start, offset) });
+  }
+  return result;
+}
+
 function record(tag, level, data) {
   const extended = data.length >= 4095;
   const header = new Uint8Array(extended ? 8 : 4);
@@ -29,80 +54,55 @@ function record(tag, level, data) {
   return join([header, data]);
 }
 
-function paragraph(text, level, { prefix = new Uint8Array(), controlMask = 0, last = true } = {}) {
-  const body = join([prefix, utf16(text.replace(/[\u0000-\u0009\u000b-\u001f]/g, ' ') + '\r')]);
-  const header = bytes('paragraph');
-  const properties = view(header);
-  properties.setUint32(0, body.length / 2 + (last ? 0x80000000 : 0), true);
-  properties.setUint32(4, controlMask, true);
-  const charShape = new Uint8Array(8);
-  return join([
-    record(66, level, header), ...(body.length > 2 ? [record(67, level + 1, body)] : []),
-    record(68, level + 1, charShape), record(69, level + 1, bytes('line'))
-  ]);
+function paragraphText(header, text, prefix = new Uint8Array()) {
+  const properties = header.payload.slice();
+  const lastFlag = view(properties).getUint32(0, true) & 0x80000000;
+  const cleanText = String(text).replace(/[\r\n]+/g, ' · ').replace(/[\u0000-\u001f]/g, ' ');
+  const body = join([prefix, utf16(`${cleanText}\r`)]);
+  view(properties).setUint32(0, lastFlag | (body.length / 2), true);
+  return [record(PARA_HEADER, header.level, properties), ...(body.length > 2 ? [record(PARA_TEXT, header.level + 1, body)] : [])];
 }
 
-function reportTable(rows, merges) {
-  const columnCount = 8;
-  const columnWidth = 5400;
-  const cells = [];
-  const definition = new Uint8Array(22 + 2 * rows.length);
-  definition.set(bytes('tableDefinition'));
-  const tableProperties = view(definition);
-  tableProperties.setUint16(4, rows.length, true);
-  tableProperties.setUint16(6, columnCount, true);
-  tableProperties.setUint16(18 + 2 * rows.length, 3, true);
-  let tableHeight = 0;
+function pageSection(template, report, offset) {
+  const { title, rowPairs, parts, totals } = report;
+  const includeSummary = offset === 0;
+  const noteRows = includeSummary ? attendanceNoteCells(report) : [];
+  const dataRows = rowPairs.slice(offset, offset + GROUP_ROWS_PER_PAGE).map(pair => pair.flatMap(attendanceRowCells));
+  const subtotals = parts.flatMap(part => ['', part.totals.male, part.totals.female, part.totals.total]);
+  const combined = [totals.male, totals.female, totals.total];
+  const page = paragraphText(template[0], title, template[1].payload.subarray(0, 48));
+  let table = 0;
 
-  for (const [row, values] of rows.entries()) {
-    const rowMerges = merges.filter(merge => merge.row === row);
-    let rowHeight = 2100;
-    const rowCells = [];
-    for (let column = 0; column < columnCount;) {
-      const merge = rowMerges.find(item => item.start === column);
-      const span = merge ? merge.end - merge.start + 1 : 1;
-      const text = String(values[column] ?? '');
-      const estimatedLines = text.split('\n').reduce((count, line) => count + Math.max(1, Math.ceil(line.length / (span * 6))), 0);
-      rowHeight = Math.max(rowHeight, estimatedLines * 1250 + 650);
-      rowCells.push({ column, span, text });
-      column += span;
-    }
-    tableHeight += rowHeight;
-    tableProperties.setUint16(18 + row * 2, rowCells.length, true);
-    for (const { column, span, text } of rowCells) {
-      const cell = bytes('tableCell');
-      const cellProperties = view(cell);
-      cellProperties.setUint16(8, column, true);
-      cellProperties.setUint16(10, row, true);
-      cellProperties.setUint16(12, span, true);
-      cellProperties.setUint32(16, columnWidth * span, true);
-      cellProperties.setUint32(20, rowHeight, true);
-      cellProperties.setUint32(34, columnWidth * span, true);
-      cells.push(record(72, 2, cell), paragraph(text, 2));
-    }
+  for (let index = 2; index < template.length; index++) {
+    const entry = template[index];
+    page.push(entry.raw);
+    if (entry.tag === TABLE) table++;
+    if (entry.tag !== CELL) continue;
+
+    const column = view(entry.payload).getUint16(8, true);
+    const row = view(entry.payload).getUint16(10, true);
+    let value;
+    if (table === 1 && column % 2 === 1) value = noteRows[row]?.[(column - 1) / 2] ?? '';
+    if (table === 2 && row >= 1 && row <= GROUP_ROWS_PER_PAGE) value = dataRows[row - 1]?.[column] ?? '';
+    if (table === 2 && row === 16 && column % 4 !== 0) value = includeSummary ? subtotals[column] : '';
+    if (table === 3 && row === 1) value = includeSummary ? combined[column] : '';
+    if (value !== undefined) page.push(...paragraphText(template[++index], value));
   }
-
-  const control = bytes('tableControl');
-  const controlProperties = view(control);
-  controlProperties.setUint32(12, 0, true);
-  controlProperties.setUint32(16, columnWidth * columnCount, true);
-  controlProperties.setUint32(20, tableHeight, true);
-  return join([record(71, 1, control), record(77, 2, definition), ...cells]);
+  return join(page);
 }
 
-export function createAttendanceHwp(CFB, { rows, merges }) {
-  const [title, ...tableRows] = rows;
-  const section = join([
-    paragraph(String(title[0]), 0, { prefix: bytes('sectionTextControls'), controlMask: 4, last: false }),
-    bytes('sectionControls'),
-    paragraph('', 0, { prefix: bytes('tableTextControl'), controlMask: 0x800, last: false }),
-    reportTable(tableRows, merges.filter(merge => merge.row > 0).map(merge => ({ ...merge, row: merge.row - 1 }))),
-    paragraph('', 0)
-  ]);
+export function createAttendanceHwp(CFB, report) {
+  const template = records(bytes('section'));
+  const pageCount = Math.max(1, Math.ceil(report.rowPairs.length / GROUP_ROWS_PER_PAGE));
+  const docInfo = bytes('docInfo');
+  view(docInfo).setUint16(4, pageCount, true); // Section count in the first document-properties record.
   const file = CFB.utils.cfb_new();
   CFB.utils.cfb_add(file, 'FileHeader', bytes('fileHeader'));
-  CFB.utils.cfb_add(file, 'DocInfo', bytes('docInfo'));
-  CFB.utils.cfb_add(file, 'BodyText/Section0', section);
-  CFB.utils.cfb_add(file, 'PrvText', utf16(rows.map(row => row.join('\t')).join('\r\n').slice(0, 1000)));
+  CFB.utils.cfb_add(file, 'DocInfo', docInfo);
+  for (let page = 0; page < pageCount; page++) {
+    const section = pageSection(template, report, page * GROUP_ROWS_PER_PAGE);
+    CFB.utils.cfb_add(file, `BodyText/Section${page}`, section);
+  }
+  CFB.utils.cfb_add(file, 'PrvText', utf16(report.title));
   return CFB.write(file, { type: 'array' });
 }

@@ -1,10 +1,20 @@
+export function attendanceRowCells(row) {
+  return row ? [row.label, row.hasMale ? row.male : '', row.hasFemale ? row.female : '', row.total] : ['', '', '', ''];
+}
+
+export function attendanceNoteCells({ noteLabels, milestoneNames, notes }) {
+  return noteLabels.map((_, index) => milestoneNames.map((part, column) =>
+    [part[index], notes[index * 2 + column]].filter(Boolean).join('\n')
+  ));
+}
+
 export function attendanceExportSheet(report) {
-  const { title, rowPairs, parts, totals, noteLabels, milestoneNames, notes, unclassifiedCount } = report;
-  const cells = row => row ? [row.label, row.hasMale ? row.male : '', row.hasFemale ? row.female : '', row.total] : ['', '', '', ''];
+  const { title, rowPairs, parts, totals, noteLabels, unclassifiedCount } = report;
+  const noteRows = attendanceNoteCells(report);
   const rows = [
     [title],
     ['1부', '남', '여', '합', '2부', '남', '여', '합'],
-    ...rowPairs.map(pair => pair.flatMap(cells)),
+    ...rowPairs.map(pair => pair.flatMap(attendanceRowCells)),
     parts.flatMap(({ totals }) => ['총계', totals.male, totals.female, totals.total])
   ];
   const merges = [{ row: 0, start: 0, end: 7 }];
@@ -12,7 +22,7 @@ export function attendanceExportSheet(report) {
   merges.push({ row: rows.length - 1, start: 0, end: 3 }, { row: rows.length - 1, start: 4, end: 7 });
 
   for (const [index, label] of noteLabels.entries()) {
-    const entries = milestoneNames.map((part, column) => [part[index], notes[index * 2 + column]].filter(Boolean).join('\n'));
+    const entries = noteRows[index];
     rows.push([label, entries[0], '', '', label, entries[1]]);
     merges.push({ row: rows.length - 1, start: 1, end: 3 }, { row: rows.length - 1, start: 5, end: 7 });
   }
