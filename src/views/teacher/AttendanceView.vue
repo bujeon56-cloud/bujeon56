@@ -140,6 +140,14 @@
       </button>
     </div>
 
+    <NewcomerAttendance
+      v-if="currentGroupId"
+      :key="currentGroupId + attendanceStore.selectedDate"
+      :group-id="currentGroupId"
+      :date="attendanceStore.selectedDate"
+      :disabled="attendanceStore.isReadOnly || attendanceStore.loading || submitting"
+    />
+
     <!-- Empty Students State -->
     <div v-if="groupStudents.length === 0" class="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 text-center shadow-sm">
       <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-3">
@@ -424,6 +432,8 @@ import { DBService } from '../../api/storage';
 import confetti from 'canvas-confetti';
 import Modal from '../../components/Modal.vue';
 import AttendanceDaySelect from '../../components/AttendanceDaySelect.vue';
+import NewcomerAttendance from '../../components/NewcomerAttendance.vue';
+import { studentAttended } from '../../utils/newcomers.js';
 import { checkCount, checkItemMaxDays } from '../../utils/attendanceChecks.js';
 import { gradeLabel } from '../../utils/studentFields.js';
 import {
@@ -472,8 +482,11 @@ const currentGroupName = computed(() => {
 });
 
 const groupStudents = computed(() => {
-  return church.getStudentsByGroup(currentGroupId.value);
+  return church.getStudentsByGroup(currentGroupId.value, attendanceStore.selectedDate);
 });
+const attendedStudentIds = computed(() => new Set(groupStudents.value
+  .filter(student => studentAttended(student, attendanceStore.selectedDate, attendanceStore.records))
+  .map(student => student.id)));
 
 // Load attendance data
 const loadData = async () => {
@@ -521,11 +534,12 @@ const onDateSelect = (e) => {
 };
 
 const isItemChecked = (studentId, itemId) => {
+  if (itemId === 'attendance') return isAttended(studentId);
   return !!attendanceStore.records[studentId]?.[itemId];
 };
 
 const isAttended = (studentId) => {
-  return !!attendanceStore.records[studentId]?.attendance;
+  return attendedStudentIds.value.has(studentId);
 };
 
 // Touch Check Toggle with Haptic Feedback
@@ -534,7 +548,7 @@ const handleCheckToggle = async (studentId, itemId) => {
   if (navigator.vibrate) {
     try { navigator.vibrate(25); } catch (e) {}
   }
-  await attendanceStore.toggleCheck(church.currentYear, currentGroupId.value, studentId, itemId);
+  await attendanceStore.setCheck(church.currentYear, currentGroupId.value, studentId, itemId, !isItemChecked(studentId, itemId));
 };
 
 const handleDayChange = async (studentId, itemId, days) => {
@@ -573,7 +587,8 @@ const getStudentTodayTalents = (studentId) => {
   const checks = attendanceStore.records[studentId] || {};
   let sum = 0;
   church.activeCheckItems.forEach(item => {
-    sum += checkCount(checks[item.id]) * (Number(item.points) || 0);
+    const value = item.id === 'attendance' ? isAttended(studentId) : checks[item.id];
+    sum += checkCount(value) * (Number(item.points) || 0);
   });
   return sum;
 };

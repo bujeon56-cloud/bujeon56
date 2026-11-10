@@ -4,6 +4,102 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {STUDENT_GRADES,studentGrade,gradeLabel,phoneDigits,formatPhone,normalizeStudentFields} from '../src/utils/studentFields.js';
 import {clearedAttendance} from '../src/utils/attendanceChecks.js';
+import {attendanceReportPart} from '../src/utils/attendanceReport.js';
+import {attendanceExportSheet, writeAttendanceExcel} from '../src/utils/attendanceReportExport.js';
+import {createAttendanceHwp} from '../src/utils/attendanceHwp.js';
+import XLSX from 'xlsx';
+import {isInAttendanceStats, isOnAttendanceRoster, newcomerAttendanceUpdate, studentAttended, withNewcomerGraduations} from '../src/utils/newcomers.js';
+
+test('attendance exports preserve numeric totals and Korean milestone notes', () => {
+ const first = {male:1,female:2,total:3};
+ const second = {male:0,female:1,total:1};
+ const sheet = attendanceExportSheet({
+   title:'11/01 출석부 출석 통계', rowPairs:[], parts:[{totals:first},{totals:second}],
+   totals:{male:1,female:3,total:4}, noteLabels:['4주 등반','8주 등반','새친구'],
+   milestoneNames:[['테스트 이름','',''],['','','']], notes:['직접 입력'], unclassifiedCount:0
+ });
+ assert.deepEqual(sheet.rows[2],['총계',1,2,3,'총계',0,1,1]);
+ assert.equal(sheet.rows[4][1],'테스트 이름\n직접 입력');
+ writeAttendanceExcel({...XLSX,writeFile(workbook, filename){
+   assert.equal(filename,'report.xlsx');
+   const result = XLSX.read(XLSX.write(workbook,{bookType:'xlsx',type:'buffer'}),{type:'buffer'});
+   assert.equal(result.Sheets['출석 통계'].D3.v,3);
+   assert.equal(result.Sheets['출석 통계'].B5.v,'테스트 이름\n직접 입력');
+ }},sheet,'report');
+ const hwp = XLSX.CFB.read(createAttendanceHwp(XLSX.CFB,sheet),{type:'array'});
+ const header = Buffer.from(XLSX.CFB.find(hwp,'/FileHeader').content);
+ const body = Buffer.from(XLSX.CFB.find(hwp,'/BodyText/Section0').content);
+ assert.equal(header.subarray(0,17).toString(),'HWP Document File');
+ assert.ok(body.includes(Buffer.from('테스트 이름','utf16le')));
+ assert.ok(body.includes(Buffer.from('직접 입력','utf16le')));
+});
+
+test('full-size HWP reports leave empty cell paragraphs without a text record', () => {
+ const rows = [['출석 통계'], ['1부','남','여','합','2부','남','여','합']];
+ for (let group = 1; group <= 21; group++) rows.push([group,2,'',2]);
+ const hwp = XLSX.CFB.read(createAttendanceHwp(XLSX.CFB,{rows,merges:[]}),{type:'array'});
+ const body = Buffer.from(XLSX.CFB.find(hwp,'/BodyText/Section0').content);
+ let tableRows;
+ let emptyCells = 0;
+ let lastParagraph;
+ for (let offset = 0; offset < body.length;) {
+   const header = body.readUInt32LE(offset);
+   offset += 4;
+   const tag = header & 1023;
+   const level = (header >>> 10) & 1023;
+   const size = header >>> 20;
+   if (tag === 77) tableRows = body.readUInt16LE(offset + 4);
+   if (tag === 66) {
+     const length = body.readUInt32LE(offset);
+     const nextTag = body.readUInt32LE(offset + size) & 1023;
+     if (level === 2 && length === 0x80000001) {
+       assert.equal(nextTag,68);
+       emptyCells++;
+     }
+     if (level === 0) lastParagraph = length;
+   }
+   offset += size;
+ }
+ assert.equal(tableRows,22);
+ assert.equal(emptyCells,105);
+ assert.equal(lastParagraph,0x80000001);
+});
+
+test('newcomers join the regular roster on their eighth distinct Sunday', () => {
+ const student = {id:'new',year:'2026',groupId:'g1',gender:'여',newcomerSince:'2026-09-06',newcomerWeeks:[]};
+ const weeks = ['2026-09-06','2026-09-13','2026-09-27','2026-10-04','2026-10-11','2026-10-18','2026-10-25','2026-11-01'];
+ for (const date of weeks.slice(0, 7)) student.newcomerWeeks = newcomerAttendanceUpdate(student,date,true);
+ student.newcomerWeeks = newcomerAttendanceUpdate(student,weeks[0],true);
+ assert.equal(student.newcomerWeeks.length,7);
+ assert.equal(isOnAttendanceRoster(student),false);
+ const groups = [{id:'g1',name:'1목장'}];
+ const regular = {id:'regular',gender:'남'};
+ const records = {g1:{regular:{attendance:true}}};
+ const statsStudents = (_, date) => [regular, student].filter(student => isInAttendanceStats(student, date));
+ assert.deepEqual(attendanceReportPart(groups, records, statsStudents, weeks[6]).totals, {male:1,female:1,total:2});
+ assert.deepEqual(attendanceReportPart(groups, records, statsStudents, '2026-09-20').totals, {male:1,female:0,total:1});
+ assert.throws(() => newcomerAttendanceUpdate(student,'2026-10-26',true),/주일/);
+ student.newcomerWeeks = newcomerAttendanceUpdate(student,weeks[7],true);
+ assert.equal(isOnAttendanceRoster(student,weeks[6]),false);
+ assert.equal(isOnAttendanceRoster(student,weeks[7]),true);
+ assert.equal(studentAttended(student,weeks[7],{}),true);
+ assert.equal(studentAttended(student,weeks[7],{new:{attendance:false}}),false);
+ assert.equal(studentAttended(student,'2026-11-08',{}),false);
+ assert.deepEqual(withNewcomerGraduations([], [student], '2026', '2026-11')[0].records.new,{attendance:true});
+ const report = attendanceReportPart(groups, records, statsStudents, weeks[7]);
+ assert.deepEqual(report.totals,{male:1,female:1,total:2});
+ student.newcomerWeeks = newcomerAttendanceUpdate(student,weeks[7],false);
+ assert.equal(isOnAttendanceRoster(student,weeks[7]),false);
+});
+
+test('weekly attendance report counts only marked students and includes missing gender in totals', () => {
+ const groups = [{id:'one',name:'1목장'},{id:'three',name:'3반'}];
+ const students = {one:[{id:'m',gender:'남'},{id:'f',gender:'여'},{id:'u'}],three:[{id:'f2',gender:'여'}]};
+ const records = {one:{m:{attendance:true},f:{attendance:false},u:{attendance:true},old:{attendance:true}}};
+ const report = attendanceReportPart(groups, records, id => students[id]);
+ assert.deepEqual(report.totals, {male:1,female:0,total:2});
+ assert.deepEqual(report.rows.map(({label,total,hasFemale}) => [label,total,hasFemale]), [['1',2,true],['3',0,true]]);
+});
 test('only fifth, sixth and other grades are offered; old values display consistently',()=>{
  assert.deepEqual(STUDENT_GRADES.map(g=>g.label),['5학년','6학년','기타']);
  assert.equal(studentGrade('초5'),'초5');assert.equal(gradeLabel('초6'),'6학년');assert.equal(gradeLabel('초4'),'기타');assert.equal(studentGrade('5학년'),'초5');
@@ -68,6 +164,7 @@ test('reset action preserves locked records, failed writes and a newly selected 
  let source=await readFile('src/stores/attendanceStore.js','utf8');
  source=source.replace("from '../utils/sundays.js'",`from '${import.meta.resolve('../src/utils/sundays.js')}'`).replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`).replace(/import \{ DBService[^\n]+\n/, 'const DBService=globalThis.__resetAction;\n').replace(/import \{ useChurchStore[^\n]+\n/, "const useChurchStore=()=>({checkItems:[{id:'attendance'},{id:'prayer'}]});\n");
  source=source.replace("from '../utils/attendanceChecks.js'",`from '${import.meta.resolve('../src/utils/attendanceChecks.js')}'`);
+ source=source.replace("from '../utils/newcomers.js'",`from '${import.meta.resolve('../src/utils/newcomers.js')}'`);
  let calls=0;
  const cleared={s:{attendance:false,prayer:false}};
  globalThis.__resetAction={resetGroupAttendance:async()=>{calls++;return cleared;}};

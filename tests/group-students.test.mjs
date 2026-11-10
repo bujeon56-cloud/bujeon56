@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {ref,computed,watch,reactive,nextTick} from 'vue';
 import * as fields from '../src/utils/studentFields.js';
 import {checkCount} from '../src/utils/attendanceChecks.js';
+import {withNewcomerGraduations} from '../src/utils/newcomers.js';
 
 test('deleted talents stay excluded in every month even if a student is reactivated',async()=>{
  const source=await readFile('src/stores/attendanceStore.js','utf8');
@@ -11,7 +12,7 @@ test('deleted talents stay excluded in every month even if a student is reactiva
  const records={removed:{attendance:true,prayer:true},kept:{attendance:true,prayer:true,qt:4}};
  const data=[{year:'2026',date:'2026-10-25',records},{year:'2026',date:'2026-11-01',records},{year:'2025',date:'2025-10-26',records}];
  const church={students:[{id:'removed',active:true,talentsDeleted:true},{id:'kept',active:true}],checkItems:[{id:'attendance',points:2},{id:'prayer',points:5},{id:'qt',points:3,maxDays:7}]};
- const calculate=new Function('useChurchStore','DBService','checkCount',`return async function(year,monthStr){${body}}`)(()=>church,{getAll:async()=>data},checkCount);
+ const calculate=new Function('useChurchStore','DBService','checkCount','withNewcomerGraduations',`return async function(year,monthStr){${body}}`)(()=>church,{getAll:async()=>data},checkCount,withNewcomerGraduations);
  for(const month of ['2026-10','2026-11']){
   const totals=await calculate('2026',month);assert.equal(totals.removed,undefined);assert.equal(totals.kept.points,19);assert.equal(totals.kept.attendanceCount,1);assert.equal(totals.kept.itemCounts.qt,4);
  }

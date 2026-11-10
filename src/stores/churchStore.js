@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { isProtectedAccount } from '../utils/protectedAccounts.js';
 import { normalizeStudentFields, compareStudentNames } from '../utils/studentFields.js';
 import { compareGroups } from '../utils/groupOrder.js';
+import { isInAttendanceStats, isOnAttendanceRoster, newcomerAttendanceUpdate } from '../utils/newcomers.js';
 import { DBService } from '../api/storage';
 import { teachersForYear, yearRemovalPlan, teacherGroupForYear } from '../utils/teacherYears.js';
 import { auth, db, doc, runTransaction, writeBatch, arrayUnion, createStaffAccount } from '../api/firebase';
@@ -42,8 +43,14 @@ export const useChurchStore = defineStore('church', {
       return state.checkItems.filter(item => item.enabled !== false);
     },
     // Get students for a specific group
-    getStudentsByGroup: (state) => (groupId) => {
-      return state.students.filter(s => s.groupId === groupId && s.year === state.currentYear && s.active !== false).sort(compareStudentNames);
+    getStudentsByGroup: (state) => (groupId, date) => {
+      return state.students.filter(s => s.groupId === groupId && s.year === state.currentYear && s.active !== false && isOnAttendanceRoster(s, date)).sort(compareStudentNames);
+    },
+    getAttendanceStatsStudentsByGroup: (state) => (groupId, date) => {
+      return state.students.filter(s => s.groupId === groupId && s.year === state.currentYear && s.active !== false && isInAttendanceStats(s, date));
+    },
+    getNewcomersByGroup: (state) => (groupId) => {
+      return state.students.filter(s => s.groupId === groupId && s.year === state.currentYear && s.active !== false && s.newcomerSince).sort(compareStudentNames);
     },
     getTeacherGroup: (state) => (teacherId) => {
       return teacherGroupForYear(state.groups, state.currentYear, teacherId);
@@ -297,6 +304,31 @@ export const useChurchStore = defineStore('church', {
     },
 
     // --- Students Management ---
+    async setNewcomerAttendance(groupId, studentId, date, attended) {
+      const account = useAuthStore();
+      const year = this.currentYear;
+      const group = this.currentGroups.find(group => group.id === groupId);
+      if (!group || !account.user || (!account.isAdmin && group.teacherId !== account.user.id)) {
+        throw new Error('이 반의 새친구 출석을 수정할 권한이 없습니다.');
+      }
+
+      const weeks = await runTransaction(db, async transaction => {
+        const studentRef = doc(db, 'students', studentId);
+        const snapshot = await transaction.get(studentRef);
+        const student = snapshot.data();
+        if (!student || student.groupId !== groupId || student.year !== year) throw new Error('이 반의 새친구를 찾을 수 없습니다.');
+        const nextWeeks = newcomerAttendanceUpdate(student, date, attended);
+        if (!account.isAdmin) {
+          const submission = await transaction.get(doc(db, 'submissions', `${year}_${date}_${groupId}`));
+          if (submission.exists()) throw new Error('제출된 출석부는 관리자만 수정할 수 있습니다.');
+        }
+        transaction.update(studentRef, { newcomerWeeks: nextWeeks });
+        return nextWeeks;
+      });
+      const student = this.students.find(student => student.id === studentId);
+      if (student) student.newcomerWeeks = weeks;
+    },
+
     async addStudent(studentData) {
       studentData = normalizeStudentFields(studentData);
       if (!this.currentGroups.some(g => g.id === studentData.groupId)) {

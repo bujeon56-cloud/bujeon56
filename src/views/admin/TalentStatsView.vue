@@ -254,6 +254,7 @@ import { useChurchStore } from '../../stores/churchStore';
 import { useAttendanceStore } from '../../stores/attendanceStore';
 import { formatTeacherName } from '../../api/storage';
 import * as XLSX from 'xlsx';
+import { isOnAttendanceRoster } from '../../utils/newcomers.js';
 import { Award, FileSpreadsheet, Coins, ChevronDown, ChevronUp } from 'lucide-vue-next';
 
 const church = useChurchStore();
@@ -306,7 +307,7 @@ onMounted(() => {
 
 // Student Full Details List
 const allStudentStats = computed(() => {
-  const currentYearStudents = church.students.filter(s => s.year === church.currentYear && s.active !== false).sort(compareStudentNames);
+  const currentYearStudents = church.students.filter(s => s.year === church.currentYear && s.active !== false && isOnAttendanceRoster(s)).sort(compareStudentNames);
 
   return currentYearStudents.map(student => {
     const stats = studentPointsMap.value[student.id] || {

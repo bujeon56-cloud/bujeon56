@@ -26,6 +26,15 @@
             <span>출석 통계</span>
           </router-link>
 
+          <router-link
+            to="/admin/attendance-report"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 flex-shrink-0"
+            exact-active-class="bg-indigo-600 !text-white shadow-sm shadow-indigo-200"
+          >
+            <Printer class="w-4 h-4" />
+            <span>출석 통계(출력)</span>
+          </router-link>
+
           <router-link 
             to="/admin/groups" 
             class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 flex-shrink-0"
@@ -75,7 +84,7 @@
     </main>
 
     <!-- Mobile Bottom Navigation for Admin -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 shadow-lg px-2 py-1.5 flex justify-around">
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 shadow-lg px-2 py-1.5 flex justify-between overflow-x-auto [&>a]:shrink-0">
       <router-link 
         to="/admin/dashboard" 
         class="flex flex-col items-center gap-0.5 py-1 px-2 text-[10px] font-bold transition"
@@ -83,6 +92,15 @@
       >
         <BarChart2 class="w-4 h-4" />
         <span>출석통계</span>
+      </router-link>
+
+      <router-link
+        to="/admin/attendance-report"
+        class="flex flex-col items-center gap-0.5 py-1 px-2 text-[10px] font-bold text-slate-400"
+        exact-active-class="!text-indigo-600"
+      >
+        <Printer class="w-4 h-4" />
+        <span>출석통계(출력)</span>
       </router-link>
 
       <router-link 
@@ -131,7 +149,7 @@
 <script setup>
 import { useAuthStore } from '../../stores/authStore';
 import AppHeader from '../../components/AppHeader.vue';
-import { BarChart2, Layers, Users, Sliders, Award, KeyRound } from 'lucide-vue-next';
+import { BarChart2, Layers, Users, Sliders, Award, KeyRound, Printer } from 'lucide-vue-next';
 
 const auth = useAuthStore();
 </script>

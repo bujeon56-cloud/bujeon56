@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { recentSunday, sundayForYear } from '../utils/sundays.js';
 import { checkCount, checkItemMaxDays } from '../utils/attendanceChecks.js';
+import { withNewcomerGraduations } from '../utils/newcomers.js';
 import { DBService } from '../api/storage';
 import { useChurchStore } from './churchStore';
 
@@ -17,6 +18,8 @@ export const useAttendanceStore = defineStore('attendance', {
     saveStatus: 'idle', // 'idle' | 'saving' | 'saved' | 'error'
     allDateSubmissions: {}, // for admin dashboard: { [groupId]: submission }
     allDateAttendances: {}, // for admin dashboard: { [groupId]: { records } }
+    statsRequest: null,
+    statsError: false
   }),
 
   getters: {
@@ -172,6 +175,10 @@ export const useAttendanceStore = defineStore('attendance', {
 
     // 6. Admin: Load Whole Church Statistics for Current Date
     async loadAllGroupsStatsForDate(year, groups) {
+      const date = this.selectedDate;
+      const request = Symbol();
+      this.statsRequest = request;
+      this.statsError = false;
       this.loading = true;
       try {
         const attendances = {};
@@ -180,20 +187,22 @@ export const useAttendanceStore = defineStore('attendance', {
         await Promise.all(
           groups.map(async (g) => {
             const [att, sub] = await Promise.all([
-              DBService.getGroupAttendance(year, this.selectedDate, g.id),
-              DBService.getSubmissionStatus(year, this.selectedDate, g.id)
+              DBService.getGroupAttendance(year, date, g.id),
+              DBService.getSubmissionStatus(year, date, g.id)
             ]);
             attendances[g.id] = att || {};
             submissions[g.id] = sub || null;
           })
         );
 
+        if (this.statsRequest !== request) return;
         this.allDateAttendances = attendances;
         this.allDateSubmissions = submissions;
       } catch (err) {
         console.error('Failed to load all stats:', err);
+        if (this.statsRequest === request) this.statsError = true;
       } finally {
-        this.loading = false;
+        if (this.statsRequest === request) this.loading = false;
       }
     },
 
@@ -206,9 +215,10 @@ export const useAttendanceStore = defineStore('attendance', {
       const excludedStudentIds = new Set(churchStore.students.filter(student => student.talentsDeleted === true).map(student => student.id));
 
       // Filter attendance entries for the target month
-      const monthRecords = allAttendances.filter(entry => {
+      const savedMonthRecords = allAttendances.filter(entry => {
         return entry.year === year && entry.date && entry.date.startsWith(monthStr);
       });
+      const monthRecords = withNewcomerGraduations(savedMonthRecords, churchStore.students, year, monthStr);
 
       // Sum points per student
       const studentPoints = {}; // { [studentId]: { points: 0, attendanceCount: 0, bibleCount: 0, prayerCount: 0, customDetails: {} } }

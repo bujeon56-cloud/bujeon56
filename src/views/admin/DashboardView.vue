@@ -333,6 +333,8 @@
         <p v-if="inspectLoading" role="status" class="text-sm">출석부를 불러오는 중…</p>
         <p v-if="inspectError" role="alert" class="text-sm text-rose-700">{{ inspectError }}</p>
         <p v-if="inspectNotice" role="status" class="text-sm text-emerald-700">{{ inspectNotice }}</p>
+        <NewcomerAttendance v-if="inspectContext" :key="inspectContext.groupId + inspectContext.date"
+          :group-id="inspectContext.groupId" :date="inspectContext.date" :disabled="inspectLoading || inspectSaving || !auth.isAdmin" />
         <div class="max-h-80 overflow-auto">
           <table class="w-full text-xs">
             <thead>
@@ -356,7 +358,7 @@
                     :disabled="inspectLoading || inspectSaving || !inspectContext || !auth.isAdmin"
                     @change="setInspectCheck(s.id, item.id, $event)"
                   />
-                  <input v-else type="checkbox" :checked="!!inspectingRecords[s.id]?.[item.id]" @change="setInspectCheck(s.id, item.id, $event.target.checked)" :disabled="inspectLoading || inspectSaving || !inspectContext || !auth.isAdmin" :aria-label="s.name + ' ' + item.label" class="w-5 h-5 accent-indigo-600 disabled:opacity-40" />
+                  <input v-else type="checkbox" :checked="item.id === 'attendance' ? studentAttended(s, attendanceStore.selectedDate, inspectingRecords) : !!inspectingRecords[s.id]?.[item.id]" @change="setInspectCheck(s.id, item.id, $event.target.checked)" :disabled="inspectLoading || inspectSaving || !inspectContext || !auth.isAdmin" :aria-label="s.name + ' ' + item.label" class="w-5 h-5 accent-indigo-600 disabled:opacity-40" />
                 </td>
               </tr>
             </tbody>
@@ -393,6 +395,8 @@
 
 <script setup>
 import AttendanceDaySelect from '../../components/AttendanceDaySelect.vue';
+import NewcomerAttendance from '../../components/NewcomerAttendance.vue';
+import { studentAttended } from '../../utils/newcomers.js';
 import { checkCount, checkItemMaxDays } from '../../utils/attendanceChecks.js';
 import { ref, shallowRef, computed, watch } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
@@ -439,6 +443,12 @@ watch([()=>church.currentYear,()=>attendanceStore.selectedDate],()=>{
 const inspectChanges = computed(()=>{
   const changes={};
   for(const student of inspectingStudents.value)for(const item of church.activeCheckItems){
+    if (item.id === 'attendance') {
+      const current = studentAttended(student, attendanceStore.selectedDate, inspectingRecords.value);
+      const original = studentAttended(student, attendanceStore.selectedDate, inspectOriginal.value);
+      if (current !== original) (changes[student.id] ||= {}).attendance = current;
+      continue;
+    }
     const current = inspectingRecords.value[student.id]?.[item.id];
     const original = inspectOriginal.value[student.id]?.[item.id];
     const normalize = checkItemMaxDays(item) ? checkCount : Boolean;
@@ -496,17 +506,19 @@ const onDateSelect = event => {
 
 // Group Calculation Helpers
 const getGroupStudents = (groupId) => {
-  return church.getStudentsByGroup(groupId);
+  return church.getStudentsByGroup(groupId, attendanceStore.selectedDate);
 };
 
+const getGroupStatsStudents = groupId => church.getAttendanceStatsStudentsByGroup(groupId, attendanceStore.selectedDate);
+
 const getGroupTotalCount = (groupId) => {
-  return getGroupStudents(groupId).length;
+  return getGroupStatsStudents(groupId).length;
 };
 
 const getGroupAttendedCount = (groupId) => {
   const records = attendanceStore.allDateAttendances[groupId] || {};
-  const students = getGroupStudents(groupId);
-  return students.filter(s => records[s.id]?.attendance).length;
+  const students = getGroupStatsStudents(groupId);
+  return students.filter(student => studentAttended(student, attendanceStore.selectedDate, records)).length;
 };
 
 const getGroupRate = (groupId) => {
@@ -647,6 +659,6 @@ async function saveInspect(){
 
 const inspectingStudents = computed(() => {
   if (!inspectingGroup.value) return [];
-  return church.getStudentsByGroup(inspectingGroup.value.id);
+  return getGroupStudents(inspectingGroup.value.id);
 });
 </script>

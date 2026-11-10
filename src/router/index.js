@@ -54,6 +54,11 @@ const routes = [
         component: () => import('../views/admin/DashboardView.vue')
       },
       {
+        path: 'attendance-report',
+        name: 'AdminAttendanceReport',
+        component: () => import('../views/admin/AttendanceReportView.vue')
+      },
+      {
         path: 'groups',
         name: 'AdminGroups',
         component: () => import('../views/admin/GroupsView.vue')
