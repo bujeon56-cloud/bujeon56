@@ -32,9 +32,9 @@ export function classesForYear(groups, year) {
   });
 }
 
-export function initialPassword(code) {
+export function initialPassword(code, prefix = '', suffix = '') {
   if (!/^\d{6}$/.test(code)) throw new Error('목장 아이디는 6자리여야 합니다.');
-  return code;
+  return `${prefix}${code}${suffix}`;
 }
 
 export function parseTeacherRoster(text, rows = classes2026()) {

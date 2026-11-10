@@ -31,10 +31,11 @@ test('2026 accounts use the requested 260101, 260114, 260201 through 260208 form
  assert.equal(rows[0].code,'260101');assert.equal(rows[13].code,'260114');assert.equal(rows[14].code,'260201');assert.equal(rows[21].code,'260208');
  assert.equal(classLoginEmail(' 260114 '),'260114@accounts.bujeon56.invalid');assert.equal(classLoginEmail('admin@example.com'),'admin@example.com');
 });
-test('six-digit initial passwords equal the requested login IDs and export the same credentials',()=>{
- const rows=classes2026().map(row=>({...row,password:initialPassword(row.code)}));
+test('initial passwords use administrator-provided characters and the CSV exports the same credentials',()=>{
+ const rows=classes2026().map(row=>({...row,password:initialPassword(row.code,'[',']')}));
  assert.equal(new Set(rows.map(r=>r.password)).size,22);
- for(const row of rows){assert.equal(row.password,row.code);assert.match(row.password,/^\d{6}$/);}
+ for(const row of rows)assert.equal(row.password,`[${row.code}]`);
+ assert.equal(initialPassword('270101'),'270101');
  const csv=credentialCsv(rows);assert.ok(csv.startsWith('\uFEFF'));assert.equal(csv.split('\r\n').length,23);assert.ok(csv.includes(rows[0].password));assert.ok(csv.includes('"260114"'));
 });
 test('batch failure preserves completed credentials and resumes only remaining rows',async()=>{

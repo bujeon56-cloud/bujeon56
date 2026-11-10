@@ -11,7 +11,12 @@
     <Modal v-model="show" :title="preparedYear + '년 목장 계정 생성'">
       <div class="space-y-3 text-sm">
         <p>각 계정은 자기 반의 학생·출석·달란트만 관리합니다. 이미 배정된 교사 계정은 유지합니다.</p>
-        <p class="p-3 bg-amber-50 text-amber-900 rounded-xl">아이디와 초기 비밀번호는 동일한 6자리입니다. 비밀번호 변경은 강제하지 않습니다. 계정 목록은 담당 선생님에게만 전달하세요.</p>
+        <p class="p-3 bg-amber-50 text-amber-900 rounded-xl">계정 목록은 담당 선생님에게만 전달하세요.</p>
+        <fieldset v-if="preparedYear === '2026' && rows.some(row => row.status !== 'existing')" :disabled="busy || rows.some(row => row.status === 'created')" class="grid grid-cols-2 gap-2">
+          <legend class="mb-1 font-bold">초기 비밀번호에 아이디 앞뒤로 붙일 문자</legend>
+          <label>앞에 붙일 문자<input v-model="passwordPrefix" type="password" autocomplete="new-password" class="mt-1 w-full rounded-xl border p-2" /></label>
+          <label>뒤에 붙일 문자<input v-model="passwordSuffix" type="password" autocomplete="new-password" class="mt-1 w-full rounded-xl border p-2" /></label>
+        </fieldset>
         <label class="block font-bold">담당 선생님 일괄 입력
           <textarea v-model="rosterInput" :disabled="busy" rows="3" class="block w-full border rounded-xl p-2 mt-1 font-normal" placeholder="부서,목장번호,선생님 (예: 1,1,홍길동)" />
         </label>
@@ -47,10 +52,14 @@ const exported = ref(false);
 const error = ref('');
 const rosterInput = ref('');
 const preparedYear=ref('');
+const passwordPrefix = ref('');
+const passwordSuffix = ref('');
 watch(()=>church.currentYear,()=>{
   rows.value=[];visible.value=false;exported.value=false;rosterInput.value='';error.value='';preparedYear.value='';
+  passwordPrefix.value='';passwordSuffix.value='';
 });
 watch(rows,()=>{exported.value=false;},{deep:true,flush:'sync'});
+watch([passwordPrefix, passwordSuffix], () => { exported.value = false; }, { flush: 'sync' });
 const show = computed({get:()=>visible.value,set:value=>{if(!busy.value)visible.value=value;}});
 const labels = {pending:'준비됨',creating:'생성 중',created:'생성 완료',existing:'기존 배정 유지',failed:'실패·재시도 가능'};
 const completed = computed(()=>rows.value.filter(r=>['created','existing'].includes(r.status)).length);
@@ -65,7 +74,7 @@ async function prepare() {
     preparedYear.value=year;
     rows.value=classesForYear(church.groups,year).map(row=>{
       const group=church.groups.find(g=>g.id===row.id);
-      return {...row,teacherName:group?.teacherName || '',password:group?.teacherId ? '' : initialPassword(row.code),status:group?.teacherId ? 'existing' : 'pending',error:''};
+      return {...row,teacherName:group?.teacherName || '',password:group?.teacherId || year==='2026' ? '' : initialPassword(row.code),status:group?.teacherId ? 'existing' : 'pending',error:''};
     });
     if(!rows.value.length)throw new Error(year+'년 등록된 목장이 없습니다. 목장 관리에서 먼저 등록해주세요.');
     visible.value=true;
@@ -81,7 +90,17 @@ function applyRoster() {
   } catch(err) { error.value=err.message; }
 }
 function download() {
+  error.value='';
   if(rows.value.some(row=>!row.teacherName.trim())) {error.value='모든 목장에 담당 선생님을 입력해주세요. 미정이면 미정으로 입력하세요.';return;}
+  if (preparedYear.value === '2026') {
+    if (!passwordPrefix.value.trim() || !passwordSuffix.value.trim()) {
+      error.value = '초기 비밀번호에 붙일 앞뒤 문자를 입력해주세요.';
+      return;
+    }
+    for (const row of rows.value.filter(row => row.status !== 'existing' && row.status !== 'created')) {
+      row.password = initialPassword(row.code, passwordPrefix.value, passwordSuffix.value);
+    }
+  }
   const blob=new Blob([credentialCsv(rows.value.filter(r=>r.status!=='existing'))],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob); const link=document.createElement('a');
   link.href=url;link.download=preparedYear.value+'-목장-초기계정.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
