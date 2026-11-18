@@ -67,7 +67,7 @@ Firebase Authentication에 등록된 이메일과 비밀번호를 사용합니�
 
 [최초 관리자 계정, Authentication, 보안 규칙 설정 안내](docs/FIREBASE_SETUP.md)를 따라 설정하세요. 관리자는 등록된 이메일로, 목장 계정은 연도·부서·목장 번호를 합친 아이디로 로그인합니다. 예: 2026년 1부 14목장 → `260114`. 체험 로그인과 공용 비밀번호는 운영에서 사용할 수 없습니다.
 
-무료 Spark 한도 안에서 사용할 수 있으며 무료 정책과 한도는 Firebase 공식 안내를 확인하세요.
+Firebase Spark 요금제의 Firestore 무료 한도는 **하루 문서 읽기 5만 건, 하루 문서 쓰기 2만 건, 저장 용량 1 GiB**입니다. [Firestore 공식 요금 안내](https://firebase.google.com/docs/firestore/pricing)
 
 ## 📁 프로젝트 폴더 구조
 

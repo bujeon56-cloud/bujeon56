@@ -2,8 +2,8 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Use subpath for GitHub Pages if in GitHub Actions, otherwise root
-const base = process.env.GITHUB_ACTIONS ? '/bujeon56/' : './';
+// Use an absolute base so app assets resolve when a nested route reloads.
+const base = process.env.GITHUB_ACTIONS ? '/bujeon56/' : '/';
 
 export default defineConfig({
   base: base,
