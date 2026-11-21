@@ -88,6 +88,11 @@ const routes = [
         path: 'talents',
         name: 'AdminTalents',
         component: () => import('../views/admin/TalentStatsView.vue')
+      },
+      {
+        path: 'login-qr',
+        name: 'AdminLoginQr',
+        component: () => import('../views/admin/LoginQrView.vue')
       }
     ]
   },

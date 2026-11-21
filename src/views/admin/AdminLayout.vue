@@ -74,13 +74,22 @@
             <Award class="w-4 h-4" />
             <span>달란트 월별 통계</span>
           </router-link>
+          <router-link
+            :to="{ name: 'AdminLoginQr' }"
+            class="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-600"
+            exact-active-class="bg-indigo-600 !text-white shadow-sm shadow-indigo-200"
+          >
+            <QrCode class="h-4 w-4" />
+            <span>로그인 QR코드</span>
+          </router-link>
         </div>
       </div>
     </div>
 
     <!-- Main Admin Content Area -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-4 sm:py-6">
-      <router-view />
+      <router-view v-if="church.initialized || $route.name === 'AdminLoginQr'" />
+      <p v-else-if="church.loading" role="status" class="p-4 text-sm text-slate-600">목장과 학생 명단을 불러오는 중입니다.</p>
     </main>
 
     <!-- Mobile Bottom Navigation for Admin -->
@@ -142,14 +151,24 @@
         <Award class="w-4 h-4" />
         <span>달란트집계</span>
       </router-link>
+      <router-link
+        :to="{ name: 'AdminLoginQr' }"
+        class="flex flex-col items-center gap-0.5 rounded-xl px-2 py-1 text-[10px] font-bold text-slate-400"
+        exact-active-class="!text-indigo-600"
+      >
+        <QrCode class="h-4 w-4" />
+        <span>로그인 QR</span>
+      </router-link>
     </nav>
   </div>
 </template>
 
 <script setup>
 import { useAuthStore } from '../../stores/authStore';
+import { useChurchStore } from '../../stores/churchStore';
 import AppHeader from '../../components/AppHeader.vue';
-import { BarChart2, Layers, Users, Sliders, Award, KeyRound, Printer } from 'lucide-vue-next';
+import { BarChart2, Layers, Users, Sliders, Award, KeyRound, Printer, QrCode } from 'lucide-vue-next';
 
 const auth = useAuthStore();
+const church = useChurchStore();
 </script>

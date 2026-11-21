@@ -13,6 +13,7 @@
         </label>
         <button :disabled="busy" class="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold disabled:opacity-50">{{ busy ? '로그인 중…' : '로그인' }}</button>
       </form>
+      <div id="pwa-install-placement" class="empty:hidden"></div>
     </div>
   </div>
 </template>
@@ -20,10 +21,8 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore, authErrorMessage } from '../stores/authStore';
-import { useChurchStore } from '../stores/churchStore';
 const loginIdKey = 'bujeon:login-id';
 const auth = useAuthStore();
-const church = useChurchStore();
 const router = useRouter();
 const email = ref('');
 try {
@@ -44,8 +43,7 @@ async function handleSubmit() {
   }
   try {
     const user = await auth.login(email.value, password.value);
-    await church.initChurchData();
-    router.push(user.role === 'admin' ? '/admin/dashboard' : '/teacher/attendance');
+    await router.push(user.role === 'admin' ? '/admin/dashboard' : '/teacher/attendance');
   } catch (err) { error.value = authErrorMessage(err); }
   finally { busy.value = false; }
 }

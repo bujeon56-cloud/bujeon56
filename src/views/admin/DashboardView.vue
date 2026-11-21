@@ -59,6 +59,9 @@
       </div>
     </div>
 
+    <p v-if="attendanceStore.loading" role="status" class="text-sm text-slate-600">선택한 주일의 출석 통계를 불러오는 중입니다.</p>
+    <p v-else-if="attendanceStore.statsError" role="alert" class="text-sm text-rose-700">출석 통계를 불러오지 못했습니다. 새로고침으로 다시 시도해 주세요.</p>
+
     <!-- Church Overall Stats Summary Grid -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <!-- Total Attendance Card -->

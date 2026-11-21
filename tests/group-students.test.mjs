@@ -6,6 +6,37 @@ import * as fields from '../src/utils/studentFields.js';
 import {checkCount} from '../src/utils/attendanceChecks.js';
 import {withNewcomerGraduations} from '../src/utils/newcomers.js';
 
+test('weekly admin stats batch the selected date and ignore an older response', async () => {
+ const source = await readFile('src/stores/attendanceStore.js', 'utf8');
+ const body = source.match(/async loadAllGroupsStatsForDate\(year, groups\) \{([\s\S]*?)\n    \},/)[1];
+ const reads = [];
+ const service = {
+  isUsingCloud: () => true,
+  getAll: (collection, filters) => new Promise(resolve => reads.push({collection, filters, resolve}))
+ };
+ const load = new Function('DBService', `return async function(year, groups){${body}}`)(service);
+ const state = {selectedDate:'2026-11-08'};
+ const old = load.call(state, '2026', [{id:'a'}, {id:'b'}]);
+ state.selectedDate = '2026-11-15';
+ const current = load.call(state, '2026', [{id:'a'}, {id:'b'}]);
+ assert.deepEqual(reads.map(read => read.collection), ['attendances','submissions','attendances','submissions']);
+ assert.deepEqual(reads[2].filters, [
+  {field:'date',op:'==',value:'2026-11-15'},
+  {field:'year',op:'==',value:'2026'}
+ ]);
+ const row = {id:'2026_2026-11-15_a',groupId:'a',records:{student:{attendance:true}}};
+ const submission = {...row, submitted:true};
+ reads[2].resolve([row,{...row,id:'2026_2026-11-15_other',groupId:'other'}]);
+ reads[3].resolve([submission]);
+ await current;
+ reads[0].resolve([]);
+ reads[1].resolve([]);
+ await old;
+ assert.deepEqual(state.allDateAttendances, {a:row.records});
+ assert.deepEqual(state.allDateSubmissions, {a:submission});
+ assert.equal(state.loading, false);
+});
+
 test('deleted talents stay excluded in every month even if a student is reactivated',async()=>{
  const source=await readFile('src/stores/attendanceStore.js','utf8');
  const body=source.match(/async calculateMonthlyTalents\(year, monthStr, groupId\) \{([\s\S]*?)\n    \}/)[1];

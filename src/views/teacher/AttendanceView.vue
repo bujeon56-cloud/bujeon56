@@ -489,22 +489,23 @@ const attendedStudentIds = computed(() => new Set(groupStudents.value
   .map(student => student.id)));
 
 // Load attendance data
-const loadData = async () => {
-  if (!church.initialized) {
-    await church.initChurchData();
-  }
+const loadData = () => {
   if (!currentGroupId.value) { attendanceStore.activeGroupKey = ''; attendanceStore.records = {}; attendanceStore.submission = null; return; }
-  await attendanceStore.loadGroupAttendance(church.currentYear, currentGroupId.value);
-  if (attendanceStore.submission?.notes) {
-    submissionNotes.value = attendanceStore.submission.notes;
-  } else {
-    submissionNotes.value = '';
-  }
+  return attendanceStore.loadGroupAttendance(church.currentYear, currentGroupId.value);
 };
+
+watch(() => attendanceStore.submission, submission => {
+  submissionNotes.value = submission?.notes || '';
+}, { immediate: true });
 
 let stopWatchingCheckItems;
 onMounted(() => {
-  loadData();
+  const key = `${church.currentYear}_${attendanceStore.selectedDate}_${currentGroupId.value}`;
+  if (attendanceStore.preloadedGroupKey === key && attendanceStore.activeGroupKey === key) {
+    attendanceStore.preloadedGroupKey = '';
+  } else {
+    loadData();
+  }
   stopWatchingCheckItems = DBService.watchCheckItems(
     items => { church.checkItems = items; },
     error => console.warn('Could not refresh attendance check items:', error)

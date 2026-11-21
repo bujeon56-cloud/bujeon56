@@ -12,7 +12,9 @@ test('activating an existing year is persisted and applied to the next teacher l
  const initBody = source.match(/async initChurchData\(\) \{([\s\S]*?)\n    \},/)[1];
  const years = new Map([['2025',{isCurrent:false}],['2026',{isCurrent:true}]]);
  const account = {isAdmin:true,user:{id:'admin'}};
+ const reads = [];
  const dbService = {getAll:async collection=>{
+   reads.push(collection);
    if (collection === 'years') return [...years].map(([id,data])=>({id,...data}));
    if (collection === 'groups') return groups;
    return [];
@@ -44,7 +46,10 @@ test('activating an existing year is persisted and applied to the next teacher l
  account.user = {id:'shared'};
  await assert.rejects(activate.call({},'2026'),/관리자만/);
  const teacher = {};
+ account.teacherScope = {uid:'shared',years:await dbService.getAll('years'),groups};
+ reads.length = 0;
  await init.call(teacher);
+ assert.deepEqual(reads.sort(),['checkItems','students','students']);
  assert.equal(teacher.currentYear,'2025');
  assert.equal(teacherGroupForYear(teacher.groups,teacher.currentYear,account.user.id).id,'a');
 });

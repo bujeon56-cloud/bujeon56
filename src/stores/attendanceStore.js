@@ -12,6 +12,7 @@ export const useAttendanceStore = defineStore('attendance', {
   state: () => ({
     selectedDate: getRecentSunday(),
     activeGroupKey: '',
+    preloadedGroupKey: '',
     records: {}, // Each check is a boolean or a day count.
     submission: null, // { submitted: true, submittedAt, submittedBy, notes }
     loading: false,
@@ -77,6 +78,7 @@ export const useAttendanceStore = defineStore('attendance', {
         this.records = records || {};
         this.submission = submission || null;
       } catch (err) {
+        if (this.preloadedGroupKey === context) this.preloadedGroupKey = '';
         console.error('Failed to load group attendance:', err);
       } finally {
         if (this.activeGroupKey === context) this.loading = false;
@@ -181,23 +183,36 @@ export const useAttendanceStore = defineStore('attendance', {
       this.statsError = false;
       this.loading = true;
       try {
-        const attendances = {};
-        const submissions = {};
-
-        await Promise.all(
-          groups.map(async (g) => {
-            const [att, sub] = await Promise.all([
-              DBService.getGroupAttendance(year, date, g.id),
-              DBService.getSubmissionStatus(year, date, g.id)
+        if (!DBService.isUsingCloud()) {
+          const entries = await Promise.all(groups.map(async group => {
+            const [records, submission] = await Promise.all([
+              DBService.getGroupAttendance(year, date, group.id),
+              DBService.getSubmissionStatus(year, date, group.id)
             ]);
-            attendances[g.id] = att || {};
-            submissions[g.id] = sub || null;
-          })
-        );
+            return { id: group.id, records, submission };
+          }));
+          if (this.statsRequest !== request) return;
+          this.allDateAttendances = Object.fromEntries(entries.map(entry => [entry.id, entry.records || {}]));
+          this.allDateSubmissions = Object.fromEntries(entries.map(entry => [entry.id, entry.submission || null]));
+          return;
+        }
+        const filters = [
+          { field: 'date', op: '==', value: date },
+          { field: 'year', op: '==', value: year }
+        ];
+        const [attendanceEntries, submissionEntries] = groups.length ? await Promise.all([
+          DBService.getAll('attendances', filters),
+          DBService.getAll('submissions', filters)
+        ]) : [[], []];
 
         if (this.statsRequest !== request) return;
-        this.allDateAttendances = attendances;
-        this.allDateSubmissions = submissions;
+        const validIds = new Set(groups.map(group => `${year}_${date}_${group.id}`));
+        this.allDateAttendances = Object.fromEntries(attendanceEntries
+          .filter(entry => validIds.has(entry.id))
+          .map(entry => [entry.groupId, entry.records || {}]));
+        this.allDateSubmissions = Object.fromEntries(submissionEntries
+          .filter(entry => validIds.has(entry.id))
+          .map(entry => [entry.groupId, entry]));
       } catch (err) {
         console.error('Failed to load all stats:', err);
         if (this.statsRequest === request) this.statsError = true;

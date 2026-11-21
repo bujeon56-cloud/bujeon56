@@ -26,7 +26,7 @@ export function authErrorMessage(error) {
 }
 
 export const useAuthStore = defineStore('auth', {
-  state: () => ({ user: null, loading: true, error: null }),
+  state: () => ({ user: null, teacherScope: null, loading: true, error: null }),
   getters: {
     isAuthenticated: state => !!state.user,
     isAdmin: state => state.user?.role === 'admin',
@@ -38,6 +38,7 @@ export const useAuthStore = defineStore('auth', {
   },
   actions: {
     async loadProfile() {
+      this.teacherScope = null;
       const uid = auth.currentUser?.uid;
       if (!uid) { this.user = null; return null; }
       const profile = await DBService.getOne('users', uid);
@@ -58,6 +59,7 @@ export const useAuthStore = defineStore('auth', {
           const label = year ? `${year.id}년도` : '활성 연도';
           throw new Error(`${label}에 배정된 반이 없습니다. 관리자에게 반 배정을 요청해주세요.`);
         }
+        this.teacherScope = { uid, years, groups };
       }
       this.user = { ...profile, id: uid };
       return this.user;
@@ -100,6 +102,7 @@ export const useAuthStore = defineStore('auth', {
     },
     async logout() {
       await signOut(auth);
+      this.teacherScope = null;
       this.user = null;
       localStorage.removeItem('bujeon_user_session');
     }

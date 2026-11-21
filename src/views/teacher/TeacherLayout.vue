@@ -49,7 +49,8 @@
 
     <!-- Main View Content (Responsive Width) -->
     <main class="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4">
-      <router-view />
+      <router-view v-if="church.initialized" />
+      <p v-else-if="church.loading" role="status" class="p-4 text-sm text-slate-600">우리 반 출석부를 불러오는 중입니다.</p>
     </main>
 
     <!-- Mobile Bottom Navigation Bar (Large Touch Friendly for all phone sizes) -->
@@ -101,14 +102,33 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/authStore';
 import { useChurchStore } from '../../stores/churchStore';
+import { useAttendanceStore } from '../../stores/attendanceStore';
+import { activeAttendanceYear, teacherGroupForYear } from '../../utils/teacherYears.js';
 import AppHeader from '../../components/AppHeader.vue';
 import { CheckSquare, Coins, Users } from 'lucide-vue-next';
 
 const auth = useAuthStore();
 const church = useChurchStore();
+const attendance = useAttendanceStore();
+const route = useRoute();
+
+watch(() => route.name, name => {
+  const scope = auth.teacherScope;
+  if (name !== 'TeacherAttendance' || church.initialized || !scope || scope.uid !== auth.user?.id) return;
+  const year = activeAttendanceYear(scope.years)?.id;
+  const group = teacherGroupForYear(scope.groups, year, scope.uid);
+  if (!group) return;
+
+  attendance.resetDefaultDate(year);
+  const key = `${year}_${attendance.selectedDate}_${group.id}`;
+  if (attendance.preloadedGroupKey === key) return;
+  attendance.preloadedGroupKey = key;
+  void attendance.loadGroupAttendance(year, group.id);
+}, { immediate: true });
 
 const currentGroupName = computed(() => {
   const group = church.getTeacherGroup(auth.user?.id);

@@ -63,32 +63,42 @@ export const useChurchStore = defineStore('church', {
 
   actions: {
     async initChurchData() {
+      const account = useAuthStore();
+      const user = account.user;
+      if (!user) { this.$reset(); return; }
       this.loading = true;
       try {
-        const account = useAuthStore();
-        if (!account.user) { this.$reset(); return; }
-        const groupFilters = account.isAdmin ? [] : [{ field: 'teacherId', op: '==', value: account.user.id }];
-        const groups = await DBService.getAll('groups', groupFilters);
-        const studentPromise = account.isAdmin ? DBService.getAll('students') :
-          Promise.all(groups.map(g => DBService.getAll('students', [{ field: 'groupId', op: '==', value: g.id }]))).then(lists => lists.flat());
-        const [years, checkItems, students, users] = await Promise.all([
-          DBService.getAll('years'),
+        const isAdmin = account.isAdmin;
+        const scope = account.teacherScope?.uid === user.id ? account.teacherScope : null;
+        const groupFilters = isAdmin ? [] : [{ field: 'teacherId', op: '==', value: user.id }];
+        const groupsPromise = scope?.groups ?? DBService.getAll('groups', groupFilters);
+        const studentsPromise = isAdmin
+          ? DBService.getAll('students')
+          : Promise.resolve(groupsPromise).then(groups => Promise.all(
+            groups.map(group => DBService.getAll('students', [{ field: 'groupId', op: '==', value: group.id }]))
+          ).then(lists => lists.flat()));
+        const [groups, years, checkItems, students, users] = await Promise.all([
+          groupsPromise,
+          scope?.years ?? DBService.getAll('years'),
           DBService.getAll('checkItems'),
-          studentPromise,
-          account.isAdmin ? DBService.getAll('users') : Promise.resolve([account.user])
+          studentsPromise,
+          isAdmin ? DBService.getAll('users') : [user]
         ]);
+        if (account.user !== user) return;
 
-        if (account.isAdmin && !years.length) {
+        if (isAdmin && !years.length) {
           const year = new Date().getFullYear().toString();
           const firstYear = { id: year, title: year + '년도', isCurrent: true };
           await DBService.set('years', year, firstYear);
           years.push(firstYear);
         }
-        if (account.isAdmin && !checkItems.length) {
+        if (account.user !== user) return;
+        if (isAdmin && !checkItems.length) {
           const item = { id: 'attendance', label: '출석', points: 2, enabled: true, isDefault: true, color: 'emerald' };
           await DBService.set('checkItems', item.id, item);
           checkItems.push(item);
         }
+        if (account.user !== user) return;
         this.years = years.length > 0 ? years : [{ id: this.currentYear, title: `${this.currentYear}년도`, isCurrent: true }];
         
         // Find current year
@@ -102,11 +112,8 @@ export const useChurchStore = defineStore('church', {
         this.students = students;
         this.teachers = users;
         this.initialized = true;
-      } catch (err) {
-        this.initialized = false;
-        throw err;
       } finally {
-        this.loading = false;
+        if (account.user === user) this.loading = false;
       }
     },
 
