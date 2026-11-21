@@ -14,7 +14,7 @@ export function newcomerGraduationDate(student) {
 export function isOnAttendanceRoster(student, date) {
   if (!student.newcomerSince) return true;
   const graduation = newcomerGraduationDate(student);
-  return Boolean(graduation && (!date || graduation <= date));
+  return Boolean(graduation && (!date || graduation < date));
 }
 
 export function isInAttendanceStats(student, date) {
@@ -33,32 +33,18 @@ export function newcomerAttendanceUpdate(student, date, attended) {
 }
 
 export function studentAttended(student, date, records) {
-  const recorded = records[student.id]?.attendance;
-  if (!student.newcomerSince || !date) return recorded ?? false;
-  const weeks = newcomerWeeks(student);
-  const graduation = weeks[NEWCOMER_REQUIRED_WEEKS - 1];
-  if (!graduation || date < graduation) return weeks.includes(date);
-  return recorded ?? (date === graduation);
+  if (date && !isOnAttendanceRoster(student, date)) return newcomerWeeks(student).includes(date);
+  return records[student.id]?.attendance ?? false;
 }
 
-export function withNewcomerGraduations(entries, students, year, month) {
+export function excludeNewcomerAttendance(entries, students, year) {
   const newcomers = new Map(students.filter(student => student.year === year && student.newcomerSince).map(student => [student.id, student]));
   if (!newcomers.size) return entries;
 
-  const days = new Map(entries.map(entry => {
-    const records = Object.fromEntries(Object.entries(entry.records || {}).filter(([id]) =>
+  return entries.map(entry => ({
+    ...entry,
+    records: Object.fromEntries(Object.entries(entry.records || {}).filter(([id]) =>
       !newcomers.has(id) || isOnAttendanceRoster(newcomers.get(id), entry.date)
-    ));
-    return [`${entry.date}_${entry.groupId}`, { ...entry, records }];
+    ))
   }));
-  for (const student of newcomers.values()) {
-    const date = newcomerGraduationDate(student);
-    if (!date?.startsWith(month)) continue;
-    const key = `${date}_${student.groupId}`;
-    const entry = days.get(key) || { year, date, groupId: student.groupId, records: {} };
-    const record = entry.records[student.id];
-    if (record?.attendance == null) entry.records[student.id] = { ...record, attendance: true };
-    days.set(key, entry);
-  }
-  return [...days.values()];
 }

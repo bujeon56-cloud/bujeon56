@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { recentSunday, sundayForYear } from '../utils/sundays.js';
 import { checkCount, checkItemMaxDays } from '../utils/attendanceChecks.js';
-import { withNewcomerGraduations } from '../utils/newcomers.js';
+import { excludeNewcomerAttendance } from '../utils/newcomers.js';
 import { DBService } from '../api/storage';
 import { useChurchStore } from './churchStore';
 
@@ -226,7 +226,17 @@ export const useAttendanceStore = defineStore('attendance', {
       // monthStr: "YYYY-MM"
       const churchStore = useChurchStore();
       const filters = groupId ? [{ field: 'groupId', op: '==', value: groupId }] : [];
-      const allAttendances = await DBService.getAll('attendances', filters);
+      const allAttendances = await DBService.getAll('attendances', filters).catch(error => {
+        if (!groupId || error.code !== 'permission-denied') throw error;
+        // Older deployed rules allow individual reads for the assigned class, but forbid listing attendance.
+        const month = Number(monthStr.slice(5));
+        const dayCount = new Date(Date.UTC(Number(year), month, 0)).getUTCDate();
+        return Promise.all(Array.from({ length: dayCount }, async (_, index) => {
+          const date = `${monthStr}-${String(index + 1).padStart(2, '0')}`;
+          const records = await DBService.getGroupAttendance(year, date, groupId);
+          return { year, date, groupId, records };
+        }));
+      });
       const students = groupId ? churchStore.students.filter(student => student.groupId === groupId) : churchStore.students;
       const checkItems = churchStore.checkItems;
       const excludedStudentIds = new Set(students.filter(student => student.talentsDeleted === true).map(student => student.id));
@@ -235,7 +245,7 @@ export const useAttendanceStore = defineStore('attendance', {
       const savedMonthRecords = allAttendances.filter(entry => {
         return entry.year === year && entry.date && entry.date.startsWith(monthStr);
       });
-      const monthRecords = withNewcomerGraduations(savedMonthRecords, students, year, monthStr);
+      const monthRecords = excludeNewcomerAttendance(savedMonthRecords, students, year);
 
       // Sum points per student
       const studentPoints = {}; // { [studentId]: { points: 0, attendanceCount: 0, bibleCount: 0, prayerCount: 0, customDetails: {} } }

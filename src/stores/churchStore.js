@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { isProtectedAccount } from '../utils/protectedAccounts.js';
 import { normalizeStudentFields, compareStudentNames } from '../utils/studentFields.js';
 import { compareGroups } from '../utils/groupOrder.js';
-import { isInAttendanceStats, isOnAttendanceRoster, newcomerAttendanceUpdate } from '../utils/newcomers.js';
+import { isInAttendanceStats, isOnAttendanceRoster, newcomerAttendanceUpdate, newcomerGraduationDate } from '../utils/newcomers.js';
 import { DBService } from '../api/storage';
 import { activeAttendanceYear, teachersForYear, yearRemovalPlan, teacherGroupForYear } from '../utils/teacherYears.js';
 import { auth, db, doc, runTransaction, writeBatch, arrayUnion, createStaffAccount } from '../api/firebase';
@@ -388,6 +388,33 @@ export const useChurchStore = defineStore('church', {
       });
       const student = this.students.find(student => student.id === studentId);
       if (student) student.newcomerWeeks = weeks;
+    },
+
+    async deleteNewcomer(groupId, studentId, date) {
+      const account = useAuthStore();
+      const year = this.currentYear;
+      const group = this.currentGroups.find(group => group.id === groupId);
+      if (!group || !account.user || (!account.isAdmin && group.teacherId !== account.user.id)) {
+        throw new Error('이 반의 새친구를 삭제할 권한이 없습니다.');
+      }
+      if (!date.startsWith(`${year}-`)) throw new Error('선택한 연도의 출석 날짜를 확인해 주세요.');
+
+      await runTransaction(db, async transaction => {
+        const studentRef = doc(db, 'students', studentId);
+        const snapshot = await transaction.get(studentRef);
+        const student = snapshot.data();
+        if (!student) return;
+        if (student.groupId !== groupId || student.year !== year || !student.newcomerSince || student.active === false) {
+          throw new Error('이 반의 새친구를 찾을 수 없습니다.');
+        }
+        if (newcomerGraduationDate(student)) throw new Error('이미 등반한 학생은 학생 관리에서 확인해 주세요.');
+        if (!account.isAdmin) {
+          const submission = await transaction.get(doc(db, 'submissions', `${year}_${date}_${groupId}`));
+          if (submission.exists()) throw new Error('제출된 출석부는 관리자만 수정할 수 있습니다.');
+        }
+        transaction.delete(studentRef);
+      });
+      this.students = this.students.filter(student => student.id !== studentId);
     },
 
     async addStudent(studentData) {

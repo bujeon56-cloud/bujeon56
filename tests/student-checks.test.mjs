@@ -8,7 +8,7 @@ import {attendanceReportPart} from '../src/utils/attendanceReport.js';
 import {attendanceExportSheet, writeAttendanceExcel} from '../src/utils/attendanceReportExport.js';
 import {createAttendanceHwp} from '../src/utils/attendanceHwp.js';
 import XLSX from 'xlsx';
-import {isInAttendanceStats, isOnAttendanceRoster, newcomerAttendanceUpdate, studentAttended, withNewcomerGraduations} from '../src/utils/newcomers.js';
+import {isInAttendanceStats, isOnAttendanceRoster, newcomerAttendanceUpdate, studentAttended, excludeNewcomerAttendance} from '../src/utils/newcomers.js';
 
 test('attendance exports preserve numeric totals and Korean milestone notes', () => {
  const first = {male:1,female:2,total:3};
@@ -84,11 +84,18 @@ test('newcomers join the regular roster on their eighth distinct Sunday', () => 
  assert.throws(() => newcomerAttendanceUpdate(student,'2026-10-26',true),/주일/);
  student.newcomerWeeks = newcomerAttendanceUpdate(student,weeks[7],true);
  assert.equal(isOnAttendanceRoster(student,weeks[6]),false);
- assert.equal(isOnAttendanceRoster(student,weeks[7]),true);
+ assert.equal(isOnAttendanceRoster(student),true);
+ assert.equal(isOnAttendanceRoster(student,weeks[7]),false);
+ assert.equal(isOnAttendanceRoster(student,'2026-11-08'),true);
  assert.equal(studentAttended(student,weeks[7],{}),true);
- assert.equal(studentAttended(student,weeks[7],{new:{attendance:false}}),false);
+ assert.equal(studentAttended(student,weeks[7],{new:{attendance:false}}),true);
  assert.equal(studentAttended(student,'2026-11-08',{}),false);
- assert.deepEqual(withNewcomerGraduations([], [student], '2026', '2026-11')[0].records.new,{attendance:true});
+ assert.deepEqual(excludeNewcomerAttendance([], [student], '2026'),[]);
+ const saved = [weeks[6], weeks[7], '2026-11-08'].map(date => ({
+  date, groupId:'g1', records:{new:{attendance:true,prayer:true}}
+ }));
+ assert.deepEqual(excludeNewcomerAttendance(saved, [student], '2026').map(entry => entry.records),
+  [{},{},{new:{attendance:true,prayer:true}}]);
  const report = attendanceReportPart(groups, records, statsStudents, weeks[7]);
  assert.deepEqual(report.totals,{male:1,female:1,total:2});
  student.newcomerWeeks = newcomerAttendanceUpdate(student,weeks[7],false);

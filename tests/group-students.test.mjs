@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {ref,computed,watch,reactive,nextTick} from 'vue';
 import * as fields from '../src/utils/studentFields.js';
 import {checkCount} from '../src/utils/attendanceChecks.js';
-import {withNewcomerGraduations} from '../src/utils/newcomers.js';
+import {excludeNewcomerAttendance} from '../src/utils/newcomers.js';
 
 test('weekly admin stats batch the selected date and ignore an older response', async () => {
  const source = await readFile('src/stores/attendanceStore.js', 'utf8');
@@ -43,11 +43,39 @@ test('deleted talents stay excluded in every month even if a student is reactiva
  const records={removed:{attendance:true,prayer:true},kept:{attendance:true,prayer:true,qt:4}};
  const data=[{year:'2026',date:'2026-10-25',records},{year:'2026',date:'2026-11-01',records},{year:'2025',date:'2025-10-26',records}];
  const church={students:[{id:'removed',active:true,talentsDeleted:true},{id:'kept',active:true}],checkItems:[{id:'attendance',points:2},{id:'prayer',points:5},{id:'qt',points:3,maxDays:7}]};
- const calculate=new Function('useChurchStore','DBService','checkCount','withNewcomerGraduations',`return async function(year,monthStr,groupId){${body}}`)(()=>church,{getAll:async()=>data},checkCount,withNewcomerGraduations);
+ const calculate=new Function('useChurchStore','DBService','checkCount','excludeNewcomerAttendance',`return async function(year,monthStr,groupId){${body}}`)(()=>church,{getAll:async()=>data},checkCount,excludeNewcomerAttendance);
  for(const month of ['2026-10','2026-11']){
   const totals=await calculate('2026',month);assert.equal(totals.removed,undefined);assert.equal(totals.kept.points,19);assert.equal(totals.kept.attendanceCount,1);assert.equal(totals.kept.itemCounts.qt,4);
  }
  assert.equal(records.removed.attendance,true);assert.equal(records.kept.prayer,true);
+});
+
+test('class monthly talents can read their own dated records when listing is denied', async () => {
+ const source = await readFile('src/stores/attendanceStore.js', 'utf8');
+ const body = source.match(/async calculateMonthlyTalents\(year, monthStr, groupId\) \{([\s\S]*?)\n    \}/)[1];
+ const denied = Object.assign(new Error('List denied'), {code:'permission-denied'});
+ const reads = [];
+ const church = {
+  students: [{id:'student',groupId:'class-a',year:'2024'}],
+  checkItems: [{id:'attendance',points:2}]
+ };
+ const service = {
+  getAll: async () => { throw denied; },
+  getGroupAttendance: async (year, date, groupId) => {
+   reads.push({year,date,groupId});
+   return date === '2024-02-29' ? {student:{attendance:true}} : {};
+  }
+ };
+ const calculate = new Function('useChurchStore','DBService','checkCount','excludeNewcomerAttendance',
+  `return async function(year, monthStr, groupId) {${body}}`)(() => church, service, checkCount, excludeNewcomerAttendance);
+ const result = await calculate('2024', '2024-02', 'class-a');
+ assert.equal(result.student.points, 2);
+ assert.deepEqual(reads.map(read => read.date),
+  Array.from({length:29}, (_, i) => `2024-02-${String(i+1).padStart(2, '0')}`));
+ assert.ok(reads.every(read => read.year === '2024' && read.groupId === 'class-a'));
+ await assert.rejects(calculate('2024', '2024-02'), {code:'permission-denied'});
+ service.getGroupAttendance = async () => { throw denied; };
+ await assert.rejects(calculate('2024', '2024-02', 'class-b'), {code:'permission-denied'});
 });
 
 test('student and talent removal requires an admin and the selected year',async()=>{
