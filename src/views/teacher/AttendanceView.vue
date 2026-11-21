@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4 pb-12 sm:pb-6 text-sm">
+  <div class="teacher-attendance space-y-4 pb-12 sm:pb-6 text-sm">
     <!-- Top Utility & Mode Bar -->
     <div class="flex items-center justify-end gap-2 px-1">
       <!-- View Mode Toggle: Cards vs Table -->
@@ -37,13 +37,13 @@
 
         <!-- Current Date Center Display -->
         <div class="flex-1 text-center min-w-0 px-1">
-          <div class="inline-flex items-center gap-1.5 bg-indigo-50/80 border border-indigo-100 px-3 py-1.5 rounded-xl">
-            <Calendar class="w-4 h-4 text-indigo-600 flex-shrink-0" />
+          <div class="inline-flex max-w-full flex-wrap items-center justify-center gap-x-1.5 bg-indigo-50/80 border border-indigo-100 px-1.5 sm:px-3 py-1.5 rounded-xl">
+            <Calendar class="hidden sm:block w-4 h-4 text-indigo-600 flex-shrink-0" />
             <input
               type="date"
               :value="attendanceStore.selectedDate"
               @change="onDateSelect"
-              class="font-black text-sm sm:text-base text-slate-900 bg-transparent focus:outline-none cursor-pointer tracking-tight"
+              class="min-w-0 max-w-full font-black text-base text-slate-900 bg-transparent focus:outline-none cursor-pointer tracking-tight"
             />
             <span class="text-xs font-black text-indigo-600 bg-white px-1.5 py-0.5 rounded shadow-xs">
               {{ getDayLabel(attendanceStore.selectedDate) }}
@@ -62,7 +62,7 @@
       </div>
 
       <!-- Realtime Status Banner -->
-      <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+      <div class="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs">
         <!-- Status Indicator -->
         <div v-if="attendanceStore.isSubmitted" class="flex items-center gap-1.5 text-amber-700 font-bold bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
           <Lock class="w-3.5 h-3.5 text-amber-600" />
@@ -183,7 +183,7 @@
       >
         <!-- Card Header: Student Info & Today's Talent Badge -->
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
+          <div class="flex min-w-0 items-center gap-3">
             <!-- Student Avatar -->
             <div
               class="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-base shadow-xs flex-shrink-0"
@@ -194,8 +194,8 @@
 
             <!-- Student Name & Grade -->
             <div>
-              <div class="flex items-center gap-2">
-                <span class="font-black text-base sm:text-lg text-slate-900 tracking-tight">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="break-all font-black text-base sm:text-lg text-slate-900 tracking-tight">
                   {{ student.name }}
                 </span>
                 <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700">
@@ -276,7 +276,7 @@
     <!-- VIEW MODE 2: TABLE VIEW (For Desktop/Wide screens) -->
     <!-- ============================================== -->
     <div v-else class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto overscroll-x-contain">
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-slate-50/80 text-xs text-slate-600 font-bold border-b border-slate-200">
@@ -305,10 +305,10 @@
                 v-for="item in tableCheckItems"
                 :key="item.id"
                 class="py-3.5 px-3 text-center"
+                :class="checkItemMaxDays(item) ? 'min-w-[14.5rem]' : 'min-w-[4rem]'"
               >
                 <AttendanceDaySelect
                   v-if="isAttended(student.id) && checkItemMaxDays(item)"
-                  class="min-w-[13rem]"
                   :value="attendanceStore.records[student.id]?.[item.id]"
                   :max-days="checkItemMaxDays(item)"
                   :label="student.name + ' ' + item.label"

@@ -2,7 +2,7 @@
 
 > **Cloudflare Pages 무료 플랜은 월 500회까지 빌드할 수 있습니다.** 사이트 접속과 새로고침은 빌드 횟수에 포함되지 않습니다. [Cloudflare Pages 공식 한도](https://developers.cloudflare.com/pages/platform/limits/#builds)
 >
-> **2026년 11월 운영 배포 3회** (2026-11-19 기준). Cloudflare Pages의 **Deployments**에서 운영 배포 성공을 확인할 때마다 해당 월의 누적 횟수를 갱신합니다. 새 달의 첫 운영 배포가 성공하면 해당 월을 1회로 기록합니다.
+> **2026년 11월 Cloudflare 운영 배포 4회** (2026-11-19 기준). Cloudflare 운영 배포 성공을 확인할 때마다 해당 월의 누적 횟수를 갱신합니다. 새 달의 첫 운영 배포가 성공하면 해당 월을 1회로 기록합니다.
 
 > **Vue 3 + Vite + Tailwind CSS + Pinia + Firebase / PWA**  
 > 모바일(Android / iOS) 및 PC에서 앱처럼 설치하여 사용하는 연도별 교회 소년부 출석 및 달란트 관리 시스템입니다.

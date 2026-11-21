@@ -35,6 +35,14 @@
             <Users class="w-4 h-4" />
             <span>학생 관리</span>
           </router-link>
+          <router-link
+            to="/teacher/talents"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-1.5"
+            :class="$route.name === 'TeacherTalents' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+          >
+            <Coins class="w-4 h-4" />
+            <span>월별 달란트</span>
+          </router-link>
         </div>
       </div>
     </div>
@@ -74,6 +82,19 @@
           </div>
           <span class="text-xs">학생 관리</span>
         </router-link>
+        <router-link
+          to="/teacher/talents"
+          class="flex-1 flex flex-col items-center gap-1 py-1.5 px-1 rounded-2xl transition duration-150 active:scale-95 touch-manipulation"
+          :class="$route.name === 'TeacherTalents' ? 'text-indigo-600 font-black' : 'text-slate-400 font-bold hover:text-slate-600'"
+        >
+          <div
+            class="w-10 h-7 rounded-xl flex items-center justify-center transition"
+            :class="$route.name === 'TeacherTalents' ? 'bg-indigo-50 text-indigo-600' : ''"
+          >
+            <Coins class="w-5 h-5" />
+          </div>
+          <span class="text-xs">월별 달란트</span>
+        </router-link>
       </div>
     </nav>
   </div>
@@ -84,7 +105,7 @@ import { computed } from 'vue';
 import { useAuthStore } from '../../stores/authStore';
 import { useChurchStore } from '../../stores/churchStore';
 import AppHeader from '../../components/AppHeader.vue';
-import { CheckSquare, Users } from 'lucide-vue-next';
+import { CheckSquare, Coins, Users } from 'lucide-vue-next';
 
 const auth = useAuthStore();
 const church = useChurchStore();

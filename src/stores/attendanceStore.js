@@ -207,18 +207,20 @@ export const useAttendanceStore = defineStore('attendance', {
     },
 
     // 7. Calculate Monthly Talent Points for all students
-    async calculateMonthlyTalents(year, monthStr) {
+    async calculateMonthlyTalents(year, monthStr, groupId) {
       // monthStr: "YYYY-MM"
       const churchStore = useChurchStore();
-      const allAttendances = (await DBService.getAll('attendances')) || [];
+      const filters = groupId ? [{ field: 'groupId', op: '==', value: groupId }] : [];
+      const allAttendances = await DBService.getAll('attendances', filters);
+      const students = groupId ? churchStore.students.filter(student => student.groupId === groupId) : churchStore.students;
       const checkItems = churchStore.checkItems;
-      const excludedStudentIds = new Set(churchStore.students.filter(student => student.talentsDeleted === true).map(student => student.id));
+      const excludedStudentIds = new Set(students.filter(student => student.talentsDeleted === true).map(student => student.id));
 
       // Filter attendance entries for the target month
       const savedMonthRecords = allAttendances.filter(entry => {
         return entry.year === year && entry.date && entry.date.startsWith(monthStr);
       });
-      const monthRecords = withNewcomerGraduations(savedMonthRecords, churchStore.students, year, monthStr);
+      const monthRecords = withNewcomerGraduations(savedMonthRecords, students, year, monthStr);
 
       // Sum points per student
       const studentPoints = {}; // { [studentId]: { points: 0, attendanceCount: 0, bibleCount: 0, prayerCount: 0, customDetails: {} } }

@@ -72,3 +72,11 @@ header > div {
   padding-right: max(0.75rem, env(safe-area-inset-right));
 }
 nav.pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }
+
+html:has(.teacher-attendance) {
+  overscroll-behavior-x: none;
+}
+
+.teacher-attendance {
+  overflow-x: clip;
+}

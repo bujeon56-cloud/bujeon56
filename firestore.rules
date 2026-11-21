@@ -61,7 +61,7 @@ service cloud.firestore {
     }
     match /attendances/{recordId} {
       allow get: if groupAccess(recordGroup(recordId));
-      allow list: if admin();
+      allow list: if groupAccess(resource.data.groupId);
       allow create, update: if validRecord(recordId, request.resource.data)
         && (admin() || (ownGroup(request.resource.data.groupId)
           && !exists(/databases/$(database)/documents/submissions/$(recordId))));

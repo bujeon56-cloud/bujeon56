@@ -71,6 +71,23 @@ test('missing attendance is readable only for own class; records must match clas
  await assertFails(setDoc(doc(db,'attendances',recordB),attendance(groupA)));
  await assertFails(setDoc(doc(db,'attendances',recordA),{...attendance(groupA),year:'2027'}));
 });
+test('monthly talent queries are limited to the assigned class for teachers', async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    const db = context.firestore();
+    await Promise.all([
+      setDoc(doc(db, 'attendances', recordA), attendance(groupA)),
+      setDoc(doc(db, 'attendances', recordB), attendance(groupB))
+    ]);
+  });
+
+  const db = env.authenticatedContext('teacher').firestore();
+  const records = collection(db, 'attendances');
+  const ownRecords = await assertSucceeds(getDocs(query(records, where('groupId', '==', groupA))));
+  if (ownRecords.size !== 1) throw new Error('Expected one attendance record from the assigned class');
+  await assertFails(getDocs(query(records, where('groupId', '==', groupB))));
+  await assertFails(getDocs(records));
+  await assertSucceeds(getDocs(collection(env.authenticatedContext('admin').firestore(), 'attendances')));
+});
 test('submission locks teacher writes and only admin may unlock',async()=>{
  const db=env.authenticatedContext('teacher').firestore();
  await assertSucceeds(setDoc(doc(db,'attendances',recordA),attendance(groupA)));
