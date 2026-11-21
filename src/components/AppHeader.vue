@@ -60,13 +60,18 @@
         <UserManual />
         <PasswordChange />
         <!-- Logout Button (Large Touch Area) -->
-        <button 
-          @click="handleLogout" 
-          class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+        <button
+          type="button"
+          @click="handleLogout"
+          :disabled="loggingOut"
+          :aria-label="loggingOut ? '로그아웃 중' : '로그아웃'"
+          :aria-busy="loggingOut"
           title="로그아웃"
+          class="flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-xl px-2 text-xs font-bold text-slate-600 transition enabled:hover:bg-rose-50 enabled:hover:text-rose-700 disabled:opacity-60"
         >
-          <LogOut class="w-4 h-4" />
-          <span class="hidden md:inline">로그아웃</span>
+          <LoaderCircle v-if="loggingOut" class="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+          <LogOut v-else class="h-4 w-4" aria-hidden="true" />
+          <span class="hidden md:inline">{{ loggingOut ? '로그아웃 중…' : '로그아웃' }}</span>
         </button>
       </div>
     </div>
@@ -75,18 +80,34 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
 import { useChurchStore } from '../stores/churchStore';
 import PasswordChange from './PasswordChange.vue';
 import UserManual from './UserManual.vue';
-import { Church, LogOut } from 'lucide-vue-next';
+import { Church, LoaderCircle, LogOut } from 'lucide-vue-next';
 const auth = useAuthStore();
 const church = useChurchStore();
 const router = useRouter();
 const isCloud = true;
 const onYearChange = event => church.setYear(event.target.value);
 const currentGroup = computed(() => church.getTeacherGroup(auth.user?.id));
-const handleLogout = async () => { await auth.logout(); church.$reset(); router.push('/login'); };
+const loggingOut = ref(false);
+
+async function handleLogout() {
+  if (loggingOut.value) return;
+  loggingOut.value = true;
+  try {
+    await auth.logout();
+    await router.replace({ name: 'Login' });
+  } catch (error) {
+    console.error('Logout failed:', error);
+    window.dispatchEvent(new CustomEvent('bujeon-error', {
+      detail: '로그아웃을 완료하지 못했습니다. 다시 시도해 주세요.'
+    }));
+  } finally {
+    loggingOut.value = false;
+  }
+}
 </script>

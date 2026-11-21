@@ -104,7 +104,12 @@ export const useAuthStore = defineStore('auth', {
       await signOut(auth);
       this.teacherScope = null;
       this.user = null;
-      localStorage.removeItem('bujeon_user_session');
+      this.error = null;
+      try {
+        localStorage.removeItem('bujeon_user_session');
+      } catch {
+        // Legacy storage cleanup must not block navigation after Firebase signs out.
+      }
     }
   }
 });

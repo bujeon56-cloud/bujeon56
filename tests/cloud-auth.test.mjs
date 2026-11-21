@@ -70,7 +70,13 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  assignedGroups.push({year:'2027',teacherId:'firebase-uid',id:'g2'});
  await store.login('teacher@example.com','proper-password');
  assert.equal(store.isTeacher,true);
- await store.logout(); assert.equal(store.user,null);
+ const removeItem = localStorage.removeItem;
+ localStorage.removeItem = () => { throw new Error('Browser storage blocked'); };
+ await store.logout();
+ localStorage.removeItem = removeItem;
+ assert.equal(store.user,null);
+ assert.equal(store.teacherScope,null);
+ assert.equal(fakeAuth.currentUser,null);
  await restoredStore.initAuth(); assert.equal(restoredStore.user,null);
  denyLogin=true;
  await assert.rejects(store.login('teacher@example.com','admin1234'));
