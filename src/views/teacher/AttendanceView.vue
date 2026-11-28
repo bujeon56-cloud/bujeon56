@@ -1,54 +1,32 @@
 <template>
   <div class="teacher-attendance space-y-4 pb-12 sm:pb-6 text-sm">
-    <!-- Top Utility & Mode Bar -->
-    <div class="flex items-center justify-end gap-2 px-1">
-      <!-- View Mode Toggle: Cards vs Table -->
-      <div class="inline-flex rounded-xl bg-slate-200/80 p-0.5 border border-slate-200">
-        <button
-          @click="viewMode = 'cards'"
-          class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1"
-          :class="viewMode === 'cards' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
-        >
-          <LayoutGrid class="w-3.5 h-3.5" />
-          <span>큰 카드</span>
-        </button>
-        <button
-          @click="viewMode = 'table'"
-          class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1"
-          :class="viewMode === 'table' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
-        >
-          <TableIcon class="w-3.5 h-3.5" />
-          <span>표로 보기</span>
-        </button>
-      </div>
-    </div>
-
     <!-- Date Navigation Card (Large Touch Controls) -->
     <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-      <div class="flex items-center justify-between gap-2">
+      <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
         <!-- Prev Week Button -->
         <button
           @click="changeSunday(-7)"
           class="w-11 h-11 sm:w-10 sm:h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition flex items-center justify-center flex-shrink-0"
           title="지난 주"
+          aria-label="지난 주"
         >
           <ChevronLeft class="w-6 h-6 sm:w-5 sm:h-5 text-slate-700" />
         </button>
 
         <!-- Current Date Center Display -->
-        <div class="flex-1 text-center min-w-0 px-1">
-          <div class="inline-flex max-w-full flex-wrap items-center justify-center gap-x-1.5 bg-indigo-50/80 border border-indigo-100 px-1.5 sm:px-3 py-1.5 rounded-xl">
-            <Calendar class="hidden sm:block w-4 h-4 text-indigo-600 flex-shrink-0" />
+        <div class="flex min-w-0 justify-center">
+          <label class="relative flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-2 text-center font-bold text-indigo-900 focus-within:outline focus-within:outline-2 focus-within:outline-indigo-500 sm:gap-2 sm:px-3">
+            <Calendar class="h-4 w-4 shrink-0 text-indigo-600" aria-hidden="true" />
+            <span class="py-1.5 leading-tight tabular-nums" aria-hidden="true">{{ selectedDateLabel }}</span>
             <input
+              class="attendance-date-input absolute inset-0 h-full w-full cursor-pointer opacity-0"
               type="date"
+              aria-label="출석부 날짜"
               :value="attendanceStore.selectedDate"
+              @click="$event.target.showPicker?.()"
               @change="onDateSelect"
-              class="min-w-0 max-w-full font-black text-base text-slate-900 bg-transparent focus:outline-none cursor-pointer tracking-tight"
             />
-            <span class="text-xs font-black text-indigo-600 bg-white px-1.5 py-0.5 rounded shadow-xs">
-              {{ getDayLabel(attendanceStore.selectedDate) }}
-            </span>
-          </div>
+          </label>
         </div>
 
         <!-- Next Week Button -->
@@ -56,13 +34,17 @@
           @click="changeSunday(7)"
           class="w-11 h-11 sm:w-10 sm:h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition flex items-center justify-center flex-shrink-0"
           title="다음 주"
+          aria-label="다음 주"
         >
           <ChevronRight class="w-6 h-6 sm:w-5 sm:h-5 text-slate-700" />
         </button>
       </div>
 
       <!-- Realtime Status Banner -->
-      <div class="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs">
+      <div
+        v-if="attendanceStore.isSubmitted || attendanceStore.loading || attendanceStore.saveStatus === 'saving' || attendanceStore.saveStatus === 'saved'"
+        class="mt-3 flex items-center border-t border-slate-100 pt-2.5 text-xs"
+      >
         <!-- Status Indicator -->
         <div v-if="attendanceStore.isSubmitted" class="flex items-center gap-1.5 text-amber-700 font-bold bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
           <Lock class="w-3.5 h-3.5 text-amber-600" />
@@ -77,14 +59,6 @@
             <CheckCircle2 class="w-4 h-4 text-emerald-500" />
             체크 즉시 저장됨
           </span>
-          <span v-else class="text-slate-400 font-medium">
-            체크 시 즉시 자동 저장됩니다
-          </span>
-        </div>
-
-        <!-- Group Name Badge -->
-        <div class="text-[11px] font-extrabold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-          {{ currentGroupName }}
         </div>
       </div>
     </div>
@@ -140,13 +114,28 @@
       </button>
     </div>
 
-    <NewcomerAttendance
-      v-if="currentGroupId"
-      :key="currentGroupId + attendanceStore.selectedDate"
-      :group-id="currentGroupId"
-      :date="attendanceStore.selectedDate"
-      :disabled="attendanceStore.isReadOnly || attendanceStore.loading || submitting"
-    />
+    <div class="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-slate-200/80 p-1" role="group" aria-label="출석부 보기 방식">
+      <button
+        type="button"
+        @click="viewMode = 'cards'"
+        :aria-pressed="viewMode === 'cards'"
+        class="flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-bold transition"
+        :class="viewMode === 'cards' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+      >
+        <LayoutGrid class="h-3.5 w-3.5" aria-hidden="true" />
+        <span>카드</span>
+      </button>
+      <button
+        type="button"
+        @click="viewMode = 'table'"
+        :aria-pressed="viewMode === 'table'"
+        class="flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-bold transition"
+        :class="viewMode === 'table' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+      >
+        <TableIcon class="h-3.5 w-3.5" aria-hidden="true" />
+        <span>표</span>
+      </button>
+    </div>
 
     <!-- Empty Students State -->
     <div v-if="groupStudents.length === 0" class="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 text-center shadow-sm">
@@ -232,14 +221,14 @@
                 :value="attendanceStore.records[student.id]?.[item.id]"
                 :max-days="checkItemMaxDays(item)"
                 :label="student.name + ' ' + item.label"
-                :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
+                :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.isBatchSaving || submitting"
                 @change="handleDayChange(student.id, item.id, $event)"
               />
             </div>
             <button
               v-else
               type="button"
-              :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
+              :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.isBatchSaving || submitting"
               @click="handleCheckToggle(student.id, item.id)"
               class="min-h-[48px] py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm transition-all duration-150 flex items-center justify-between gap-2 border active:scale-95 disabled:active:scale-100 touch-manipulation cursor-pointer"
               :class="[
@@ -252,7 +241,7 @@
               <div class="flex items-center gap-2">
                 <div
                   class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs"
-                  :class="isItemChecked(student.id, item.id) ? 'bg-white/30 text-white' : 'bg-slate-200 text-slate-400'"
+                  :class="isItemChecked(student.id, item.id) ? 'bg-[rgb(255_255_255_/_0.3)] text-white' : 'bg-slate-200 text-slate-400'"
                 >
                   <Check v-if="isItemChecked(student.id, item.id)" class="w-4 h-4" />
                   <span v-else>•</span>
@@ -262,7 +251,7 @@
 
               <span
                 class="text-[11px] font-bold px-1.5 py-0.5 rounded-md"
-                :class="isItemChecked(student.id, item.id) ? 'bg-white/20 text-white' : 'text-slate-400'"
+                :class="isItemChecked(student.id, item.id) ? 'bg-[rgb(255_255_255_/_0.2)] text-white' : 'text-slate-400'"
               >
                 +{{ item.points }}달란트
               </span>
@@ -312,13 +301,13 @@
                   :value="attendanceStore.records[student.id]?.[item.id]"
                   :max-days="checkItemMaxDays(item)"
                   :label="student.name + ' ' + item.label"
-                  :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
+                  :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.isBatchSaving || submitting"
                   @change="handleDayChange(student.id, item.id, $event)"
                 />
                 <button
                   v-else-if="item.id === 'attendance' || isAttended(student.id)"
                   type="button"
-                  :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
+                  :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.isBatchSaving || submitting"
                   @click="handleCheckToggle(student.id, item.id)"
                   class="w-10 h-10 rounded-xl inline-flex items-center justify-center transition border cursor-pointer active:scale-95 disabled:cursor-not-allowed"
                   :class="isItemChecked(student.id, item.id) ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-slate-100 text-slate-300 border-slate-200'"
@@ -336,6 +325,14 @@
         </table>
       </div>
     </div>
+
+    <NewcomerAttendance
+      v-if="currentGroupId"
+      :key="currentGroupId + attendanceStore.selectedDate"
+      :group-id="currentGroupId"
+      :date="attendanceStore.selectedDate"
+      :disabled="attendanceStore.isReadOnly || attendanceStore.loading || submitting"
+    />
 
     <!-- Notes & Submission Footer Card -->
     <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
@@ -518,20 +515,23 @@ watch([() => attendanceStore.selectedDate, () => currentGroupId.value, () => chu
 });
 
 // Helpers
-const getDayLabel = (dateStr) => {
-  const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-  const d = new Date(dateStr);
-  return days[d.getDay()] || '주일';
-};
+const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
+  year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'UTC',
+});
+const selectedDateLabel = computed(() => {
+  const date = new Date(attendanceStore.selectedDate);
+  return Number.isNaN(date.getTime()) ? '날짜 선택' : dateFormatter.format(date);
+});
 
 const changeSunday = (dayOffset) => {
   const d = new Date(attendanceStore.selectedDate);
-  d.setDate(d.getDate() + dayOffset);
-  attendanceStore.setDate(d.toISOString().split('T')[0]);
+  d.setUTCDate(d.getUTCDate() + dayOffset);
+  attendanceStore.setDate(d.toISOString().slice(0, 10));
 };
 
 const onDateSelect = (e) => {
-  attendanceStore.setDate(e.target.value);
+  if (e.target.value) attendanceStore.setDate(e.target.value);
+  else e.target.value = attendanceStore.selectedDate;
 };
 
 const isItemChecked = (studentId, itemId) => {
@@ -637,3 +637,13 @@ const executeSubmit = async () => {
   }
 };
 </script>
+
+<style scoped>
+.attendance-date-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  cursor: pointer;
+}
+</style>

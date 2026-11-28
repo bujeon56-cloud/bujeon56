@@ -16,7 +16,7 @@
         <button v-if="opening === 'login'" type="button" class="rounded-xl px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200" @click="hidePermanently">
           영원히 보지 않기
         </button>
-        <button type="button" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold" @click="visible = false">닫기</button>
+        <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900 hover:bg-slate-200" @click="visible = false">닫기</button>
       </template>
     </Modal>
   </Teleport>

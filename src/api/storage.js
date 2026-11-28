@@ -443,6 +443,19 @@ export const DBService = {
     return attendances[key]?.records || {};
   },
 
+  async saveStudentCheckPatch(year, date, groupId, studentId, checkValues) {
+    if (!this.isUsingCloud()) {
+      const records = await this.saveStudentAttendance(year, date, groupId, studentId, checkValues);
+      return { ...checkValues, updatedAt: records[studentId].updatedAt };
+    }
+
+    const updatedAt = new Date().toISOString();
+    const patch = { ...checkValues, updatedAt };
+    const ref = doc(db, 'attendances', `${year}_${date}_${groupId}`);
+    await setDoc(ref, { year, date, groupId, records: { [studentId]: patch }, updatedAt }, { merge: true });
+    return patch;
+  },
+
   async saveStudentAttendance(year, date, groupId, studentId, checkValues) {
     const key = `${year}_${date}_${groupId}`;
     const timestamp = new Date().toISOString();

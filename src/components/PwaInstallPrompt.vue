@@ -3,10 +3,10 @@
     <section
       v-if="!hidden && !installed && (deferredPrompt || guide)"
       aria-labelledby="pwa-install-title"
-      class="mt-5 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3.5"
+      class="mt-5 rounded-2xl border border-blue-100 bg-blue-50/70 p-3.5"
     >
       <div class="flex items-start gap-3">
-        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-indigo-700">
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-blue-700">
           <Smartphone class="h-5 w-5" aria-hidden="true" />
         </div>
         <div class="min-w-0 flex-1">
@@ -16,36 +16,36 @@
           </p>
         </div>
         <button type="button" @click="hidden = true" aria-label="설치 안내 닫기"
-          class="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-indigo-100">
+          class="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-blue-100">
           <X class="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 
       <div class="mt-3 flex flex-wrap gap-2">
         <button v-if="deferredPrompt" type="button" @click="installPwa"
-          class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-700">
+          class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">
           앱 설치
         </button>
         <button v-if="guide" type="button" @click="expanded = !expanded"
           :aria-expanded="expanded" aria-controls="pwa-install-steps"
-          class="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-50">
+          class="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50">
           {{ expanded ? '설치 방법 접기' : '설치 방법' }}
         </button>
       </div>
 
-      <div v-if="guide" v-show="expanded" id="pwa-install-steps" class="mt-3 border-t border-indigo-100 pt-3">
+      <div v-if="guide" v-show="expanded" id="pwa-install-steps" class="mt-3 border-t border-blue-100 pt-3">
         <ol class="list-decimal space-y-1.5 pl-5 text-xs leading-relaxed text-slate-700">
           <li v-for="step in guide.steps" :key="step">{{ step }}</li>
         </ol>
         <div v-if="guide.showAddress" class="mt-3">
           <button type="button" @click="copyAddress"
-            class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-50">
+            class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50">
             <Copy class="h-3.5 w-3.5" aria-hidden="true" />
             주소 복사
           </button>
           <p v-if="copyStatus" role="status" class="mt-2 text-xs text-slate-700">{{ copyStatus }}</p>
           <input v-if="showAddress" ref="addressField" :value="address" readonly aria-label="출석부 주소"
-            class="mt-2 w-full min-w-0 rounded-lg border border-indigo-200 bg-white px-2 py-1 text-slate-800" />
+            class="mt-2 w-full min-w-0 rounded-lg border border-blue-200 bg-white px-2 py-1 text-slate-800" />
         </div>
       </div>
     </section>

@@ -5,6 +5,8 @@ import { excludeNewcomerAttendance } from '../utils/newcomers.js';
 import { DBService } from '../api/storage';
 import { useChurchStore } from './churchStore';
 
+const checkQueues = new WeakMap();
+
 // Helper: Get Nearest Sunday date string (YYYY-MM-DD)
 export function getRecentSunday(date = new Date()) { return recentSunday(date); }
 
@@ -17,6 +19,7 @@ export const useAttendanceStore = defineStore('attendance', {
     submission: null, // { submitted: true, submittedAt, submittedBy, notes }
     loading: false,
     saveStatus: 'idle', // 'idle' | 'saving' | 'saved' | 'error'
+    checkSavesPending: false,
     allDateSubmissions: {}, // for admin dashboard: { [groupId]: submission }
     allDateAttendances: {}, // for admin dashboard: { [groupId]: { records } }
     statsRequest: null,
@@ -26,6 +29,7 @@ export const useAttendanceStore = defineStore('attendance', {
   getters: {
     isSubmitted: (state) => !!state.submission?.submitted,
     isReadOnly: (state) => !!state.submission?.submitted,
+    isBatchSaving: (state) => state.saveStatus === 'saving' && !state.checkSavesPending,
     
     // Check if student attended
     isStudentAttended: (state) => (studentId) => {
@@ -64,14 +68,19 @@ export const useAttendanceStore = defineStore('attendance', {
 
     // 2. Load Attendance for a single Group
     async loadGroupAttendance(year, groupId) {
-      const context = year + '_' + this.selectedDate + '_' + groupId;
+      const date = this.selectedDate;
+      const context = year + '_' + date + '_' + groupId;
       this.activeGroupKey = context;
       this.saveStatus = 'idle';
+      this.checkSavesPending = false;
       this.loading = true;
       try {
+        const pending = checkQueues.get(this)?.get(context);
+        if (pending) await pending.tail;
+        if (this.activeGroupKey !== context) return;
         const [records, submission] = await Promise.all([
-          DBService.getGroupAttendance(year, this.selectedDate, groupId),
-          DBService.getSubmissionStatus(year, this.selectedDate, groupId)
+          DBService.getGroupAttendance(year, date, groupId),
+          DBService.getSubmissionStatus(year, date, groupId)
         ]);
 
         if (this.activeGroupKey !== context) return;
@@ -90,10 +99,7 @@ export const useAttendanceStore = defineStore('attendance', {
     },
 
     async setCheck(year, groupId, studentId, checkItemId, value) {
-      if (this.isReadOnly || this.loading || this.saveStatus === 'saving') {
-        console.warn('Attendance is locked/submitted. Modification disabled.');
-        return;
-      }
+      if (this.isReadOnly || this.loading || this.isBatchSaving) return;
 
       const item = useChurchStore().checkItems.find(item => item.id === checkItemId);
       const maxDays = item ? checkItemMaxDays(item) : 0;
@@ -102,29 +108,49 @@ export const useAttendanceStore = defineStore('attendance', {
       }
 
       const date = this.selectedDate;
-      const context = this.activeGroupKey;
-      const previous = this.records[studentId];
-      this.records[studentId] = { ...previous, [checkItemId]: value };
+      const context = year + '_' + date + '_' + groupId;
+      const visibleRecords = this.records;
+      let queues = checkQueues.get(this);
+      if (!queues) checkQueues.set(this, queues = new Map());
+      let queue = queues.get(context);
+      if (!queue) {
+        queue = { tail: Promise.resolve(), confirmed: { ...visibleRecords }, students: new Set(), failed: false };
+        queues.set(context, queue);
+      }
 
+      queue.students.add(studentId);
+      visibleRecords[studentId] = { ...visibleRecords[studentId], [checkItemId]: value };
+      this.checkSavesPending = true;
       this.saveStatus = 'saving';
 
-      try {
-        const records = await DBService.saveStudentAttendance(year, date, groupId, studentId, { [checkItemId]: value });
-        if (this.activeGroupKey !== context) return;
-        this.records[studentId] = records[studentId];
-        this.saveStatus = 'saved';
-        setTimeout(() => {
-          if (this.activeGroupKey === context && this.saveStatus === 'saved') this.saveStatus = 'idle';
-        }, 2000);
-      } catch (err) {
-        console.error('Auto save error:', err);
-        if (this.activeGroupKey === context) {
-          if (previous) this.records[studentId] = previous;
-          else delete this.records[studentId];
-          this.saveStatus = 'error';
+      // Firestore queues each field write immediately. Apply confirmations in input order.
+      const request = DBService.saveStudentCheckPatch(year, date, groupId, studentId, { [checkItemId]: value })
+        .then(patch => ({ patch }), error => ({ error }));
+      const write = queue.tail.then(async () => {
+        const result = await request;
+        if ('error' in result) throw result.error;
+        queue.confirmed[studentId] = { ...queue.confirmed[studentId], ...result.patch };
+      });
+      const settled = write.catch(() => { queue.failed = true; });
+      queue.tail = settled;
+      await settled;
+      if (queue.tail === settled) {
+        queues.delete(context);
+        if (this.activeGroupKey === context && this.records === visibleRecords) {
+          for (const id of queue.students) {
+            if (queue.confirmed[id]) visibleRecords[id] = queue.confirmed[id];
+            else delete visibleRecords[id];
+          }
+          this.checkSavesPending = false;
+          this.saveStatus = queue.failed ? 'error' : 'saved';
+          if (!queue.failed) {
+            setTimeout(() => {
+              if (this.records === visibleRecords && this.saveStatus === 'saved') this.saveStatus = 'idle';
+            }, 2000);
+          }
         }
-        throw err;
       }
+      await write;
     },
 
     // Set batch attendance for all students (e.g. "전체 출석" 버튼)

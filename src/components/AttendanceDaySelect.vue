@@ -1,19 +1,18 @@
 <template>
   <div class="attendance-day-options">
     <div class="day-button-grid" role="group" :aria-label="label">
-      <VBtn
+      <button
         v-for="day in options"
         :key="day"
         type="button"
-        class="day-button"
-        :variant="day === days ? 'flat' : 'outlined'"
-        :style="day === days ? selectedButtonStyle : undefined"
+        class="min-h-10 min-w-0 touch-manipulation rounded-lg border text-xs font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-500 disabled:opacity-70"
+        :class="day === days ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 text-slate-600 enabled:hover:bg-blue-50'"
         :aria-pressed="day === days"
         :disabled="disabled"
         @click="selectDay(day)"
       >
         {{ day }}일
-      </VBtn>
+      </button>
     </div>
     <p v-if="days > maxDays" class="mt-1 text-left text-xs text-slate-500">기존 기록 {{ days }}일</p>
   </div>
@@ -21,7 +20,6 @@
 
 <script setup>
 import { computed } from 'vue';
-import { VBtn } from 'vuetify/components/VBtn';
 import { checkCount } from '../utils/attendanceChecks.js';
 
 const props = defineProps({
@@ -34,7 +32,6 @@ const emit = defineEmits(['change']);
 
 const options = computed(() => Array.from({ length: props.maxDays + 1 }, (_, day) => day));
 const days = computed(() => checkCount(props.value));
-const selectedButtonStyle = { backgroundColor: '#4f46e5', color: '#fff', opacity: 1 };
 
 function selectDay(day) {
   if (day !== days.value) emit('change', day);
@@ -58,24 +55,4 @@ function selectDay(day) {
   }
 }
 
-.v-btn.day-button {
-  min-width: 0;
-  height: 2.5rem;
-  padding-inline: 0;
-  border-radius: 0.5rem;
-  border-color: #cbd5e1;
-  color: #475569;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: normal;
-}
-
-.v-btn.day-button[aria-pressed='true'] :deep(.v-btn__overlay) {
-  opacity: 0;
-}
-
-.v-btn.day-button:focus-visible {
-  outline: 2px solid #6366f1;
-  outline-offset: 1px;
-}
 </style>

@@ -5,9 +5,9 @@
         <Coins class="h-5 w-5 text-amber-500" />
         월별 달란트 통계
       </h3>
-      <label v-if="group" class="flex items-center gap-2 font-bold text-slate-600">
-        조회 월
-        <select v-model="selectedMonth" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+      <label v-if="group" class="flex w-full min-w-0 items-center gap-2 font-bold text-slate-600 sm:w-auto">
+        <span class="shrink-0">조회 월</span>
+        <select v-model="selectedMonth" class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 sm:flex-none">
           <option v-for="month in 12" :key="month" :value="month">{{ group.year }}년 {{ month }}월</option>
         </select>
       </label>

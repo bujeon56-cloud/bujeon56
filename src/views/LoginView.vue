@@ -1,8 +1,7 @@
 <template>
   <div class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-    <div class="w-full max-w-md bg-white rounded-3xl p-6 shadow-lg space-y-5">
-      <h1 class="text-2xl font-black text-indigo-700">소년부 스마트 출석부</h1>
-      <p class="text-sm text-slate-600">목장 아이디, 관리자 아이디 또는 등록된 이메일로 로그인하세요.</p>
+    <div class="w-full max-w-md space-y-5 rounded-3xl border-2 border-blue-300 bg-white p-6 shadow-lg">
+      <h1 class="text-center text-2xl font-black text-blue-700">스마트 출석부</h1>
       <p v-if="error || auth.error" role="alert" class="p-3 bg-rose-50 text-rose-700 rounded-xl text-sm">{{ error || auth.error }}</p>
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <label class="block text-sm font-bold">아이디 또는 이메일
@@ -11,7 +10,7 @@
         <label class="block text-sm font-bold">비밀번호
           <input v-model="password" type="password" autocomplete="current-password" required class="mt-1 w-full border rounded-xl p-3" />
         </label>
-        <button :disabled="busy" class="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold disabled:opacity-50">{{ busy ? '로그인 중…' : '로그인' }}</button>
+        <button :disabled="busy" class="w-full py-3 rounded-xl bg-blue-600 text-white font-bold disabled:opacity-50">{{ busy ? '로그인 중…' : '로그인' }}</button>
       </form>
       <div id="pwa-install-placement" class="empty:hidden"></div>
     </div>

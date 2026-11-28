@@ -1,9 +1,9 @@
 <template>
-  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+  <header class="sticky top-0 z-40 border-b border-indigo-200 bg-indigo-50 shadow-sm">
     <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
       <!-- Left: Logo & Title -->
       <div class="flex items-center gap-2.5 min-w-0">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-100 flex-shrink-0">
+        <div class="hidden sm:flex w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 items-center justify-center text-white shadow-md shadow-indigo-100 flex-shrink-0">
           <Church class="w-5 h-5" />
         </div>
         <div class="min-w-0">
@@ -11,29 +11,25 @@
             <span class="font-black text-sm sm:text-base tracking-tight text-slate-900 truncate">
               소년부 출석부
             </span>
-            <!-- Year Badge / Selector -->
-            <select 
-              v-if="auth.isAdmin" 
-              :value="church.currentYear" 
-              @change="onYearChange"
-              class="text-[11px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg px-1.5 py-0.5 focus:outline-none cursor-pointer"
-            >
-              <option v-for="y in church.years" :key="y.id" :value="y.id">
-                {{ y.title || y.id + '년' }}
-              </option>
-            </select>
-            <span 
-              v-else 
-              class="text-[10px] sm:text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md px-1.5 py-0.2"
-            >
-              {{ church.currentYear }}년
+            <span class="inline-flex min-w-0 items-center gap-1.5">
+              <select
+                v-if="auth.isAdmin"
+                :value="church.currentYear"
+                @change="onYearChange"
+                class="min-w-0 cursor-pointer rounded-lg border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[11px] font-black text-indigo-700 focus:outline-none"
+              >
+                <option v-for="y in church.years" :key="y.id" :value="y.id">
+                  {{ y.title || y.id + '년' }}
+                </option>
+              </select>
+              <span v-else class="whitespace-nowrap rounded-md border border-indigo-200 bg-indigo-50 px-1.5 text-[10px] font-black text-indigo-700 sm:text-xs">
+                {{ church.currentYear }}년
+              </span>
+              <span class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[10px] font-medium text-slate-600">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true"></span>
+                DB 연결
+              </span>
             </span>
-          </div>
-
-          <div class="text-[10px] text-slate-400 font-medium flex items-center gap-1 truncate">
-            <span class="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" :class="isCloud ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'"></span>
-            <span class="truncate">{{ isCloud ? '공용 DB 연결' : '로컬 모드' }}</span>
-
           </div>
         </div>
       </div>
@@ -41,7 +37,7 @@
       <!-- Right: User Avatar & Logout -->
       <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         <!-- User Badge -->
-        <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100/90 rounded-xl text-xs font-bold text-slate-700">
+        <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-100/90 rounded-xl text-xs font-bold text-slate-700">
           <div 
             class="w-6 h-6 rounded-full flex items-center justify-center font-black text-[11px] flex-shrink-0"
             :class="auth.isAdmin ? 'bg-indigo-600 text-white' : 'bg-emerald-100 text-emerald-700'"
@@ -57,8 +53,8 @@
           </span>
         </div>
 
+        <ThemeToggle />
         <UserManual />
-        <PasswordChange />
         <!-- Logout Button (Large Touch Area) -->
         <button
           type="button"
@@ -84,13 +80,12 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
 import { useChurchStore } from '../stores/churchStore';
-import PasswordChange from './PasswordChange.vue';
 import UserManual from './UserManual.vue';
+import ThemeToggle from './ThemeToggle.vue';
 import { Church, LoaderCircle, LogOut } from 'lucide-vue-next';
 const auth = useAuthStore();
 const church = useChurchStore();
 const router = useRouter();
-const isCloud = true;
 const onYearChange = event => church.setYear(event.target.value);
 const currentGroup = computed(() => church.getTeacherGroup(auth.user?.id));
 const loggingOut = ref(false);

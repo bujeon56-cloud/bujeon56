@@ -1,22 +1,23 @@
 <template>
-  <section class="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm sm:p-4">
+  <section class="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-200 p-3.5 shadow-sm sm:p-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-3">
         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
           <UserRoundPlus class="h-5 w-5" aria-hidden="true" />
         </div>
-        <div>
-          <h3 class="font-black text-slate-900">새친구 출석</h3>
-          <p class="mt-0.5 text-xs leading-relaxed text-slate-500">서로 다른 주일에 8회 출석하면 반 학생으로 자동 등록됩니다. 새친구 출석은 달란트에 포함되지 않습니다.</p>
-        </div>
+        <h3 class="font-black text-slate-900">새친구 출석</h3>
       </div>
       <button type="button" :disabled="disabled || busy" :aria-expanded="showForm" @click="showForm = !showForm"
-        class="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-indigo-100 bg-indigo-50 px-3 text-xs font-bold text-indigo-700 enabled:hover:bg-indigo-100 disabled:opacity-50">
+        class="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-xl border border-indigo-100 bg-indigo-50 px-3 text-xs font-bold text-indigo-700 enabled:hover:bg-indigo-100 disabled:opacity-50">
         <Plus v-if="!showForm" class="h-4 w-4" aria-hidden="true" />
         <X v-else class="h-4 w-4" aria-hidden="true" />
         {{ showForm ? '등록 닫기' : '새친구 등록' }}
       </button>
     </div>
+    <p class="text-xs leading-relaxed text-slate-500">
+      <span class="block">다른 주일에 8번 출석하면 반 학생으로 자동 등록됩니다.</span>
+      <span class="block">새친구 출석은 달란트에 포함되지 않습니다.</span>
+    </p>
 
     <form v-if="showForm" class="grid grid-cols-2 gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3" @submit.prevent="register">
       <label class="col-span-2 space-y-1 text-xs font-bold text-slate-700">

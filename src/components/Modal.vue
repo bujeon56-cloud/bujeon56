@@ -2,20 +2,22 @@
   <Transition name="fade">
     <div 
       v-if="modelValue" 
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4"
       @click.self="close"
     >
       <div 
-        class="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85dvh] flex flex-col overflow-hidden animate-scale-up border border-slate-100"
+        class="modal-panel animate-scale-up flex max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 text-slate-900 shadow-2xl"
       >
         <!-- Modal Header -->
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div class="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-6 py-4">
           <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
             <slot name="title">{{ title }}</slot>
           </h3>
           <button 
-            @click="close" 
-            class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition"
+            type="button"
+            aria-label="닫기"
+            @click="close"
+            class="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-200 hover:text-slate-900"
           >
             <X class="w-5 h-5" />
           </button>
@@ -27,7 +29,7 @@
         </div>
 
         <!-- Modal Footer -->
-        <div v-if="$slots.footer" class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
+        <div v-if="$slots.footer" class="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-100 px-6 py-4">
           <slot name="footer"></slot>
         </div>
       </div>
@@ -58,6 +60,10 @@ const close = () => {
 </script>
 
 <style scoped>
+.modal-panel {
+  background-color: rgb(var(--app-surface-white, 255 255 255));
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -69,8 +75,8 @@ const close = () => {
 }
 
 @keyframes scaleUp {
-  0% { transform: scale(0.95); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+  0% { transform: scale(0.95); }
+  100% { transform: scale(1); }
 }
 
 .animate-scale-up {

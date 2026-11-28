@@ -3,22 +3,22 @@
     <!-- Top Filter Bar: Date & Part Filter -->
     <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
       <!-- Sunday Date Picker & Prev/Next -->
-      <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+      <div class="flex w-full min-w-0 items-center justify-between gap-2 sm:w-auto sm:justify-start">
         <button
           @click="changeSunday(-7)"
           :disabled="sundayIndex <= 0"
-          class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+          class="shrink-0 rounded-xl bg-slate-100 p-2 text-slate-700 transition hover:bg-slate-200"
           title="이전 주"
         >
           <ChevronLeft class="w-4 h-4" />
         </button>
 
-        <div class="flex items-center gap-2">
-          <Calendar class="w-4 h-4 text-indigo-600" />
+        <div class="flex min-w-0 items-center gap-1 sm:gap-2">
+          <Calendar class="hidden h-4 w-4 shrink-0 text-indigo-600 sm:block" />
           <select aria-label="출석 통계 일요일 선택" :value="attendanceStore.selectedDate" @change="onDateSelect" class="font-bold text-sm text-slate-800 bg-transparent focus:outline-none cursor-pointer">
             <option v-for="date in availableSundays" :key="date" :value="date">{{ date }}</option>
           </select>
-          <span class="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-md">
+          <span class="shrink-0 whitespace-nowrap rounded-md bg-indigo-50 px-1 py-0.5 text-xs font-semibold text-indigo-600 sm:px-2">
             {{ getDayLabel(attendanceStore.selectedDate) }}
           </span>
         </div>
@@ -26,7 +26,7 @@
         <button
           @click="changeSunday(7)"
           :disabled="sundayIndex >= availableSundays.length - 1"
-          class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+          class="shrink-0 rounded-xl bg-slate-100 p-2 text-slate-700 transition hover:bg-slate-200"
           title="다음 주"
         >
           <ChevronRight class="w-4 h-4" />

@@ -172,9 +172,9 @@ async function exportReport(format) {
 </script>
 
 <style scoped>
-.report-table :is(th, td) { border: 1px solid #cbd5e1; padding: 0.3rem; }
-.report-table :is(thead, tfoot) { background: #f1f5f9; font-weight: 700; }
-.report-table :is(th, td):nth-child(5) { border-left: 2px solid #94a3b8; }
+.report-table :is(th, td) { @apply border border-slate-300; padding: 0.3rem; }
+.report-table :is(thead, tfoot) { @apply bg-slate-100 font-bold; }
+.report-table :is(th, td):nth-child(5) { @apply border-l-2; }
 .report-summary { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 .print-only { display: none; }
 

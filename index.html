@@ -11,6 +11,14 @@
     <link rel="icon" type="image/png" href="%BASE_URL%pwa-192x192.png" />
 
     <title>소년부 스마트 출석부</title>
+    <script>
+      try {
+        if (localStorage.getItem('bujeon:theme') === 'dark') {
+          document.documentElement.dataset.theme = 'dark';
+          document.querySelector('meta[name="theme-color"]').content = '#101725';
+        }
+      } catch {}
+    </script>
   </head>
   <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
     <div id="app"></div>

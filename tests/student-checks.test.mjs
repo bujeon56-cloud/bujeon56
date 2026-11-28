@@ -159,6 +159,8 @@ test('cloud reset commits the whole target group once and leaves other groups un
  await assert.rejects(DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{qt:8}}),/체크 값을 확인/);
  const teacherEdit=await DBService.saveStudentAttendance('2026','2026-10-25','g1','s',{qt:2});
  assert.equal(teacherEdit.s.qt,2);assert.equal(teacherEdit.s.prayer,true);
+ const patch = await DBService.saveStudentCheckPatch('2026', '2026-10-25', 'g1', 's', { qt: 4 });
+ assert.deepEqual(saved.records, { s: { qt: 4, updatedAt: patch.updatedAt } });
  delete docs[submissionKey];
  await assert.rejects(DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{attendance:false}},'충돌'),/제출 상태가 변경/);
  assert.equal(docs[key].records.s.attendance,true);
@@ -169,10 +171,10 @@ test('cloud reset commits the whole target group once and leaves other groups un
  delete globalThis.__studentDb;
 });
 
-test('reset action preserves locked records, failed writes and a newly selected group',async t=>{
+test('attendance changes preserve records across pending saves, failures and group switches',async t=>{
  t.mock.timers.enable({apis:['setTimeout']});
  let source=await readFile('src/stores/attendanceStore.js','utf8');
- source=source.replace("from '../utils/sundays.js'",`from '${import.meta.resolve('../src/utils/sundays.js')}'`).replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`).replace(/import \{ DBService[^\n]+\n/, 'const DBService=globalThis.__resetAction;\n').replace(/import \{ useChurchStore[^\n]+\n/, "const useChurchStore=()=>({checkItems:[{id:'attendance'},{id:'prayer'}]});\n");
+ source=source.replace("from '../utils/sundays.js'",`from '${import.meta.resolve('../src/utils/sundays.js')}'`).replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`).replace(/import \{ DBService[^\n]+\n/, 'const DBService=globalThis.__resetAction;\n').replace(/import \{ useChurchStore[^\n]+\n/, "const useChurchStore=()=>({checkItems:[{id:'attendance'},{id:'prayer'},{id:'qt',maxDays:7}]});\n");
  source=source.replace("from '../utils/attendanceChecks.js'",`from '${import.meta.resolve('../src/utils/attendanceChecks.js')}'`);
  source=source.replace("from '../utils/newcomers.js'",`from '${import.meta.resolve('../src/utils/newcomers.js')}'`);
  let calls=0;
@@ -193,5 +195,32 @@ test('reset action preserves locked records, failed writes and a newly selected 
  const pending=store.setAllAttendance('2026','g1',[{id:'s'}],false);
  store.activeGroupKey='2026_2026-10-25_g2';store.records={other:{attendance:true}};
  finish(cleared);await pending;assert.equal(store.records.other.attendance,true);assert.equal(store.records.s,undefined);
+
+ store.$reset();
+ store.selectedDate = '2026-10-25';
+ store.activeGroupKey = '2026_2026-10-25_g1';
+ store.records = { s: { attendance: true, qt: 0 } };
+ const changes = [];
+ const firstWrite = Promise.withResolvers();
+ globalThis.__resetAction.saveStudentCheckPatch = async (year, date, group, id, patch) => {
+   changes.push(patch);
+   if (patch.qt === 2) await firstWrite.promise;
+   if (patch.qt === 4) throw new Error('network');
+   return patch;
+ };
+ const firstCheck = store.setCheck('2026', 'g1', 's', 'qt', 2);
+ const failedCheck = assert.rejects(store.setCheck('2026', 'g1', 's', 'qt', 4), /network/);
+ const nextCheck = store.setCheck('2026', 'g1', 's', 'prayer', true);
+ assert.deepEqual(store.records.s, { attendance: true, qt: 4, prayer: true });
+ assert.equal(store.saveStatus, 'saving');
+ assert.equal(store.isBatchSaving, false);
+ await Promise.resolve();
+ assert.deepEqual(changes, [{ qt: 2 }, { qt: 4 }, { prayer: true }]);
+ firstWrite.resolve();
+ await Promise.all([firstCheck, failedCheck, nextCheck]);
+ assert.deepEqual(changes, [{ qt: 2 }, { qt: 4 }, { prayer: true }]);
+ assert.deepEqual(store.records.s, { attendance: true, qt: 2, prayer: true });
+ assert.equal(store.saveStatus, 'error');
+ assert.equal(store.checkSavesPending, false);
  t.mock.timers.tick(2000);delete globalThis.__resetAction;
 });

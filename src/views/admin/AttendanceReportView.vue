@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-      <label class="flex items-center gap-3 text-sm font-bold">
-        출석 통계 날짜
-        <select v-model="attendance.selectedDate" class="rounded-lg border border-slate-200 bg-white px-2 py-1">
+      <label class="flex w-full min-w-0 items-center gap-3 text-sm font-bold sm:w-auto">
+        <span class="shrink-0">출석 통계 날짜</span>
+        <select v-model="attendance.selectedDate" class="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 sm:flex-none">
           <option v-for="date in availableSundays" :key="date" :value="date">{{ date }}</option>
         </select>
       </label>

@@ -19,6 +19,64 @@
     @apply select-text;
     font-size: 16px; /* Prevents auto-zoom on iOS Safari when focusing inputs */
   }
+
+  select {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    text-overflow: ellipsis;
+  }
+
+  @media screen {
+    :where(html[data-theme="dark"]) :where(*, ::before, ::after) {
+      border-color: rgb(var(--app-edge-slate-200, 226 232 240));
+    }
+
+    :where(html[data-theme="dark"]) :where(input:not([type="checkbox"], [type="radio"], [type="range"]), textarea, select) {
+      background-color: rgb(var(--app-surface-slate-100));
+    }
+  }
+}
+
+/* Keep the native control and constrain its picker where CSS picker styling is supported. */
+@supports (appearance: base-select) and selector(select::picker(select)) {
+  select:not([multiple], [size]),
+  select:not([multiple], [size])::picker(select) {
+    appearance: base-select;
+  }
+
+  select:not([multiple], [size])::picker(select) {
+    @apply rounded-xl border border-solid border-slate-300 text-slate-900 shadow-lg;
+    background-color: rgb(var(--app-surface-white, 255 255 255));
+    box-sizing: border-box;
+    inline-size: clamp(0px, max(anchor-size(width), 11rem), calc(100vw - 1rem));
+    min-inline-size: 0;
+    max-block-size: min(18rem, 45dvh);
+    overflow: auto;
+    overscroll-behavior: contain;
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline, --select-below, --select-above;
+  }
+
+  select:not([multiple], [size]) option {
+    @apply px-3 py-2 text-sm;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  select:not([multiple], [size]) option:checked,
+  select:not([multiple], [size]) option:enabled:hover {
+    @apply bg-indigo-50 text-indigo-800;
+  }
+
+  @position-try --select-below {
+    position-area: block-end span-all;
+    justify-self: center;
+  }
+
+  @position-try --select-above {
+    position-area: block-start span-all;
+    justify-self: center;
+  }
 }
 
 /* Touch Friendly Utilities */
@@ -35,11 +93,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgb(var(--app-edge-slate-300, 203 213 225));
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgb(var(--app-ink-slate-400, 148 163 184));
 }
 
 /* Animations */
