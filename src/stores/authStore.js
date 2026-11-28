@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { classLoginEmail } from '../utils/classAccounts.js';
 import { activeAttendanceYear, teacherGroupForYear } from '../utils/teacherYears.js';
 import { DBService, formatTeacherName } from '../api/storage';
-import { auth, authReady, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from '../api/firebase';
+import { auth, authReady, setLoginPersistence, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from '../api/firebase';
 
 const retryableSessionErrors = new Set([
   'unavailable',
@@ -37,7 +37,7 @@ export const useAuthStore = defineStore('auth', {
     userDepartmentId: state => state.user?.departmentId || ''
   },
   actions: {
-    async loadProfile() {
+    async loadProfile(rememberLogin = false) {
       this.teacherScope = null;
       const uid = auth.currentUser?.uid;
       if (!uid) { this.user = null; return null; }
@@ -49,7 +49,9 @@ export const useAuthStore = defineStore('auth', {
       if (!['admin', 'teacher'].includes(profile.role)) {
         throw new Error('교직원 문서는 있으나 role 값이 올바르지 않습니다. 현재 값: ' + JSON.stringify(profile.role ?? null) + '. 문자열 admin 또는 teacher가 필요합니다. 확인할 위치: ' + location);
       }
-      if (profile.role === 'teacher') {
+      if (profile.role === 'admin') {
+        await setLoginPersistence(false);
+      } else {
         const [years, groups] = await Promise.all([
           DBService.getAll('years', [], { serverOnly: true }),
           DBService.getAll('groups', [{ field: 'teacherId', op: '==', value: uid }], { serverOnly: true })
@@ -60,6 +62,7 @@ export const useAuthStore = defineStore('auth', {
           throw new Error(`${label}에 배정된 반이 없습니다. 관리자에게 반 배정을 요청해주세요.`);
         }
         this.teacherScope = { uid, years, groups };
+        if (rememberLogin) await setLoginPersistence(true);
       }
       this.user = { ...profile, id: uid };
       return this.user;
@@ -81,17 +84,19 @@ export const useAuthStore = defineStore('auth', {
         if (!retryableSessionErrors.has(error.code)) await signOut(auth).catch(() => {});
       } finally { this.loading = false; }
     },
-    async login(identifier, password) {
+    async login(identifier, password, rememberLogin = false) {
       this.loading = true;
       this.error = null;
       try {
         const email = classLoginEmail(identifier);
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('목장 아이디(예: 260114 또는 20260114)나 관리자 이메일을 입력해주세요.');
         await authReady;
+        await setLoginPersistence(false);
         await signInWithEmailAndPassword(auth, email, password);
-        return await this.loadProfile();
+        return await this.loadProfile(rememberLogin);
       } catch (error) {
         this.user = null;
+        this.teacherScope = null;
         await signOut(auth).catch(() => {});
         this.error = authErrorMessage(error);
         throw new Error(this.error);

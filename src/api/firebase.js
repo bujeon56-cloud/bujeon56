@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp, deleteApp } from 'firebase/app';
 import { isProtectedAccount } from '../utils/protectedAccounts.js';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, getDocsFromServer, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, runTransaction, writeBatch, arrayUnion } from 'firebase/firestore';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, inMemoryPersistence, createUserWithEmailAndPassword, sendPasswordResetEmail, deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, browserSessionPersistence, inMemoryPersistence, createUserWithEmailAndPassword, sendPasswordResetEmail, deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 
 // Firebase web configuration is public. Access is enforced by Auth and Firestore rules.
 export const firebaseConfig = {
@@ -15,7 +15,22 @@ export const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const authReady = setPersistence(auth, browserLocalPersistence).then(() => auth.authStateReady());
+const authReady = auth.authStateReady().then(async () => {
+  const policyKey = 'bujeon:auth-persistence-v2';
+  // Require a fresh login before restoring any session under the new policy.
+  try {
+    if (localStorage.getItem(policyKey)) return;
+  } catch {
+    // A blocked policy marker cannot be used to trust an existing login.
+  }
+  if (auth.currentUser) await signOut(auth);
+  try {
+    localStorage.setItem(policyKey, '1');
+  } catch {
+    // A fresh login is still allowed when the marker cannot be stored.
+  }
+});
+const setLoginPersistence = remember => setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
 const isFirebaseConfigured = true;
 
 export async function changeAdminPassword(uid, currentPassword, newPassword) {
@@ -61,4 +76,4 @@ export async function createStaffAccount(email, password, saveProfile) {
   }
 }
 
-export { app, db, auth, authReady, isFirebaseConfigured, collection, doc, setDoc, getDoc, getDocs, getDocsFromServer, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, runTransaction, writeBatch, arrayUnion, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword };
+export { app, db, auth, authReady, setLoginPersistence, isFirebaseConfigured, collection, doc, setDoc, getDoc, getDocs, getDocsFromServer, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, runTransaction, writeBatch, arrayUnion, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword };

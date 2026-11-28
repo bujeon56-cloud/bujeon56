@@ -8,6 +8,7 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  const stored = new Map([['bujeon_user_session', JSON.stringify({id:'fake', role:'admin'})]]);
  globalThis.localStorage={removeItem:key=>stored.delete(key),getItem:key=>stored.get(key)};
  let signedOut=0; let denyLogin=false; let expectedEmail='teacher@example.com';
+ const persistenceChanges=[];
  const fakeAuth={currentUser:null,app:{options:{projectId:'test-project'}}};
  let profile={role:'teacher', name:'교사', id:'firebase-uid'};
  let profileError;
@@ -24,13 +25,14 @@ test('Firebase Auth identity controls login and session restoration; demo creden
    }
  };
  globalThis.__authTest={DBService:db,formatTeacherName:name=>name,auth:fakeAuth,authReady:Promise.resolve(),
+   setLoginPersistence:async remember=>{persistenceChanges.push(remember);},
    signInWithEmailAndPassword:async (auth,email,password)=>{
      assert.equal(email,expectedEmail);
      if(denyLogin) throw Object.assign(new Error('denied'),{code:'auth/invalid-credential'});
      auth.currentUser={uid:'firebase-uid'};
    },
    signOut:async auth=>{signedOut++;auth.currentUser=null;},sendPasswordResetEmail:async()=>{}};
- const transformed=source.replace(/import \{ DBService[^\n]+\n/,'').replace(/import \{ auth,[^\n]+\n/,`const {DBService,formatTeacherName,auth,authReady,signInWithEmailAndPassword,signOut,sendPasswordResetEmail}=globalThis.__authTest;\n`);
+ const transformed=source.replace(/import \{ DBService[^\n]+\n/,'').replace(/import \{ auth,[^\n]+\n/,`const {DBService,formatTeacherName,auth,authReady,setLoginPersistence,signInWithEmailAndPassword,signOut,sendPasswordResetEmail}=globalThis.__authTest;\n`);
  // Relative Pinia import is resolved by an absolute file URL in the in-memory module.
  const code=transformed.replace("from 'pinia'",`from '${import.meta.resolve('pinia')}'`)
    .replace("from '../utils/classAccounts.js'",`from '${import.meta.resolve('../src/utils/classAccounts.js')}'`)
@@ -39,6 +41,7 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  setActivePinia(createPinia()); const store=useAuthStore();
  await store.initAuth(); assert.equal(store.user,null); assert.equal(stored.has('bujeon_user_session'),false);
  const user=await store.login('teacher@example.com','proper-password'); assert.equal(user.id,'firebase-uid'); assert.equal(store.isAdmin,false);
+ assert.deepEqual(persistenceChanges.splice(0),[false]);
  const restoredStore=useAuthStore(createPinia());
  profileError=Object.assign(new Error('offline'),{code:'unavailable'});
  await restoredStore.initAuth();
@@ -63,13 +66,16 @@ test('Firebase Auth identity controls login and session restoration; demo creden
  await assert.rejects(store.login('bujeon56','proper-password'),/2027년도에 배정된 반이 없습니다/);
  assert.equal(fakeAuth.currentUser,null);
  profile={...profile,role:'admin'};
- await store.login('bujeon56','proper-password');
+ persistenceChanges.length=0;
+ await store.login('bujeon56','proper-password',true);
  assert.equal(store.isAdmin,true);
+ assert.deepEqual(persistenceChanges.splice(0),[false,false]);
  profile={...profile,role:'teacher'};
  expectedEmail='teacher@example.com';
  assignedGroups.push({year:'2027',teacherId:'firebase-uid',id:'g2'});
- await store.login('teacher@example.com','proper-password');
+ await store.login('teacher@example.com','proper-password',true);
  assert.equal(store.isTeacher,true);
+ assert.deepEqual(persistenceChanges.splice(0),[false,true]);
  const removeItem = localStorage.removeItem;
  localStorage.removeItem = () => { throw new Error('Browser storage blocked'); };
  await store.logout();
