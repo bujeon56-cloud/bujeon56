@@ -19,7 +19,7 @@ export default defineConfig({
         name: '교회 소년부 스마트 출석부',
         short_name: '소년부 출석부',
         description: '교회 소년부 연도별/목장별 실시간 출석 및 달란트 관리 웹앱',
-        theme_color: '#4f46e5',
+        theme_color: '#2563eb',
         background_color: '#f8fafc',
         display: 'standalone',
         orientation: 'any',
@@ -38,7 +38,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        importScripts: ['./push-worker.js'],
+        // importScripts: ['./push-worker.js'],
         // Fetch manuals on demand so they do not compete with app startup.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
       }

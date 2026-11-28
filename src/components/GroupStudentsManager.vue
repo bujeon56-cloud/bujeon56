@@ -4,7 +4,7 @@
       <div v-if="!editing" class="space-y-3">
         <div class="flex items-center justify-between gap-2">
           <p class="text-sm font-bold">등록 학생 {{ students.length }}명</p>
-          <button @click="openForm()" :disabled="busy" class="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm">학생 등록</button>
+          <button @click="openForm()" :disabled="busy" class="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm">학생 등록</button>
         </div>
         <p v-if="!students.length" class="text-sm text-slate-500 py-4">등록된 학생이 없습니다.</p>
         <div v-for="student in students" :key="student.id" class="border rounded-xl p-3 space-y-2">
@@ -39,7 +39,7 @@
     <template #footer>
       <button v-if="editing" @click="editing = false; error = ''" :disabled="busy" class="px-4 py-2 border rounded-xl">목록으로</button>
       <button v-else @click="visible = false" :disabled="busy" class="px-4 py-2 border rounded-xl">닫기</button>
-      <button v-if="editing" type="submit" form="group-student-form" :disabled="busy || !group" class="px-4 py-2 bg-indigo-600 text-white rounded-xl disabled:opacity-40">{{ busy ? '저장 중…' : '저장' }}</button>
+      <button v-if="editing" type="submit" form="group-student-form" :disabled="busy || !group" class="px-4 py-2 bg-blue-600 text-white rounded-xl disabled:opacity-40">{{ busy ? '저장 중…' : '저장' }}</button>
     </template>
   </Modal>
 </template>

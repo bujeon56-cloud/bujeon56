@@ -3,12 +3,12 @@
     <AppHeader />
 
     <!-- Teacher Sub-nav Header -->
-    <div class="border-b border-slate-200/80 bg-white shadow-xs">
+    <div class="border-b border-slate-200 bg-white">
       <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 min-w-0">
-          <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+          <span class="h-2 w-2 shrink-0 rounded-full bg-emerald-400" aria-hidden="true"></span>
           <div class="flex min-w-0 items-baseline gap-2">
-            <h2 class="min-w-0 truncate text-sm font-black tracking-tight text-slate-900 sm:text-base">
+            <h2 class="min-w-0 truncate text-sm font-bold tracking-tight text-slate-900 sm:text-base">
               {{ currentGroupName }} 출석부
             </h2>
             <p class="min-w-0 truncate text-[11px] font-medium text-slate-500" :title="auth.userName">
@@ -48,13 +48,13 @@
     </div>
 
     <!-- Main View Content (Responsive Width) -->
-    <main class="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4">
+    <main class="page-content mx-auto w-full min-w-0 max-w-4xl flex-1">
       <router-view v-if="church.initialized" />
       <p v-else-if="church.loading" role="status" class="p-4 text-sm text-slate-600">우리 반 출석부를 불러오는 중입니다.</p>
     </main>
 
     <!-- Mobile Bottom Navigation Bar (Large Touch Friendly for all phone sizes) -->
-    <nav class="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-slate-300 bg-slate-100 px-6 pt-2 shadow-[0_-4px_16px_rgb(15_23_42_/_0.12)] sm:hidden">
+    <nav aria-label="교사 메뉴" class="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-slate-300 bg-slate-100 px-4 pt-2 sm:hidden">
       <div class="flex items-center justify-around max-w-sm mx-auto">
         <router-link 
           to="/teacher/attendance" 

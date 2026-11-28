@@ -1,11 +1,11 @@
 <template>
-  <div class="space-y-4 pb-12 sm:pb-6">
+  <div class="space-y-5 pb-12 sm:space-y-6 sm:pb-6">
     <!-- Header Action Bar -->
     <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3">
       <div>
         <h3 class="font-black text-base sm:text-lg text-slate-900 flex items-center gap-2">
           <span>우리 반 학생</span>
-          <span class="px-2.5 py-0.5 text-xs font-black bg-indigo-50 text-indigo-700 rounded-lg">
+          <span class="px-2.5 py-0.5 text-xs font-black bg-blue-50 text-blue-700 rounded-lg">
             {{ students.length }}명
           </span>
         </h3>
@@ -15,7 +15,7 @@
       <!-- Add Student Button (Big Touch Friendly) -->
       <button
         @click="openAddModal"
-        class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs sm:text-sm font-black rounded-xl shadow-md shadow-indigo-100 transition flex items-center gap-1.5 flex-shrink-0 touch-manipulation cursor-pointer"
+        class="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs sm:text-sm font-black rounded-xl shadow-md shadow-blue-100 transition flex items-center gap-1.5 flex-shrink-0 touch-manipulation cursor-pointer"
       >
         <UserPlus class="w-4 h-4" />
         <span>새 학생 등록</span>
@@ -24,7 +24,7 @@
 
     <!-- Empty State -->
     <div v-if="students.length === 0" class="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 text-center shadow-sm">
-      <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-3">
+      <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-3">
         <Users class="w-8 h-8" />
       </div>
       <h4 class="font-extrabold text-slate-800 text-base sm:text-lg">등록된 학생이 없습니다</h4>
@@ -33,7 +33,7 @@
       </p>
       <button
         @click="openAddModal"
-        class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-indigo-100 active:scale-95 transition cursor-pointer"
+        class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-blue-100 active:scale-95 transition cursor-pointer"
       >
         <UserPlus class="w-5 h-5" />
         <span>학생 등록하기</span>
@@ -41,7 +41,7 @@
     </div>
 
     <!-- Students Card List (Optimized for Mobile Viewing & Quick Contacts) -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div
         v-for="student in students"
         :key="student.id"
@@ -80,7 +80,7 @@
             <div class="flex items-center gap-1">
               <button
                 @click="openEditModal(student)"
-                class="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
+                class="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer"
                 title="수정"
               >
                 <Edit2 class="w-4 h-4" />
@@ -108,14 +108,14 @@
           <div v-if="student.phone" class="flex items-center gap-1.5">
             <a
               :href="`tel:${student.phone}`"
-              class="flex-1 py-2 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold flex items-center justify-center gap-1.5 transition text-center"
+              class="flex-1 py-2 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold flex items-center justify-center gap-1.5 transition text-center"
             >
               <Phone class="w-3.5 h-3.5 text-indigo-600" />
               <span class="truncate">학생 통화</span>
             </a>
             <a
               :href="`sms:${student.phone}`"
-              class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold transition flex items-center justify-center"
+              class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold transition flex items-center justify-center"
               title="문자 보내기"
             >
               <MessageSquare class="w-3.5 h-3.5" />
@@ -238,7 +238,7 @@
         </button>
         <button
           @click="saveStudent"
-          class="px-6 py-2.5 text-xs sm:text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200"
+          class="px-6 py-2.5 text-xs sm:text-sm font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-200"
         >
           {{ isEditing ? '수정 저장' : '등록 완료' }}
         </button>

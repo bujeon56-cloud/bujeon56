@@ -4,7 +4,7 @@
       <h2 class="text-lg font-black">{{ dateLabel }} 출석부 출석 통계</h2>
       <div class="screen-only flex flex-wrap gap-2">
         <button v-for="format in outputFormats" :key="format.id" type="button"
-          class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+          class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
           :disabled="attendance.loading || attendance.statsError || exporting" @click="exportReport(format.id)">
           {{ format.label }}
         </button>

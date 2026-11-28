@@ -1,5 +1,5 @@
 <template>
-  <section class="space-y-4 text-sm">
+  <section class="space-y-5 text-sm sm:space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <h3 class="flex items-center gap-2 font-black text-slate-900">
         <Coins class="h-5 w-5 text-amber-500" />
@@ -40,18 +40,28 @@ import { Coins } from 'lucide-vue-next';
 import { useAttendanceStore } from '../../stores/attendanceStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useChurchStore } from '../../stores/churchStore';
-import { seoulDate } from '../../utils/sundays.js';
+import { defaultMonthForYear } from '../../utils/sundays.js';
 
 const auth = useAuthStore();
 const church = useChurchStore();
 const attendance = useAttendanceStore();
-const selectedMonth = ref(Number(seoulDate().slice(5, 7)));
+const monthSelection = ref(null);
 const stats = ref({});
 const loading = ref(false);
 const loadFailed = ref(false);
 const retry = ref(0);
 
 const group = computed(() => church.getTeacherGroup(auth.user?.id));
+const selectedMonth = computed({
+  get() {
+    const year = group.value?.year;
+    if (monthSelection.value?.year === year && monthSelection.value) return monthSelection.value.month;
+    return defaultMonthForYear(year);
+  },
+  set(month) {
+    monthSelection.value = { year: group.value?.year, month };
+  },
+});
 const students = computed(() => group.value ? church.getStudentsByGroup(group.value.id) : []);
 
 watch([group, selectedMonth, retry], async ([currentGroup, month], _, onCleanup) => {

@@ -1,44 +1,32 @@
 <template>
-  <Transition name="fade">
-    <div 
-      v-if="modelValue" 
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4"
-      @click.self="close"
-    >
-      <div 
-        class="modal-panel animate-scale-up flex max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 text-slate-900 shadow-2xl"
-      >
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-6 py-4">
-          <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
-            <slot name="title">{{ title }}</slot>
-          </h3>
-          <button 
-            type="button"
-            aria-label="닫기"
-            @click="close"
-            class="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-200 hover:text-slate-900"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <!-- Modal Body -->
-        <div class="p-6 overflow-y-auto overscroll-contain min-h-0 space-y-4">
-          <slot></slot>
-        </div>
-
-        <!-- Modal Footer -->
-        <div v-if="$slots.footer" class="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-100 px-6 py-4">
-          <slot name="footer"></slot>
-        </div>
+  <VDialog :model-value="modelValue" :aria-labelledby="titleId" max-width="540" scrollable @update:model-value="value => { if (!value) close() }">
+    <VCard color="surface" rounded="xl" class="w-full border border-slate-200">
+      <div class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-5 py-3 sm:px-6">
+        <h3 :id="titleId" class="text-base font-bold text-slate-900">
+          <slot name="title">{{ title }}</slot>
+        </h3>
+        <VBtn type="button" aria-label="닫기" icon variant="text" size="36" class="text-slate-600" @click="close">
+          <X class="h-5 w-5" aria-hidden="true" />
+        </VBtn>
       </div>
-    </div>
-  </Transition>
+      <div class="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-5 sm:p-6">
+        <slot />
+      </div>
+      <div v-if="$slots.footer" class="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 sm:px-6">
+        <slot name="footer" />
+      </div>
+    </VCard>
+  </VDialog>
 </template>
 
 <script setup>
 import { X } from 'lucide-vue-next';
+import { useId } from 'vue';
+import { VBtn } from 'vuetify/components/VBtn';
+import { VCard } from 'vuetify/components/VCard';
+import { VDialog } from 'vuetify/components/VDialog';
+
+const titleId = useId();
 
 defineProps({
   modelValue: {
@@ -58,28 +46,3 @@ const close = () => {
   emit('close');
 };
 </script>
-
-<style scoped>
-.modal-panel {
-  background-color: rgb(var(--app-surface-white, 255 255 255));
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-@keyframes scaleUp {
-  0% { transform: scale(0.95); }
-  100% { transform: scale(1); }
-}
-
-.animate-scale-up {
-  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-</style>

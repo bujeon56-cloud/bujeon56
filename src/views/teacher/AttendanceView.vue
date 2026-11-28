@@ -1,7 +1,7 @@
 <template>
-  <div class="teacher-attendance space-y-4 pb-12 sm:pb-6 text-sm">
+  <div class="teacher-attendance space-y-5 pb-12 text-sm sm:space-y-6 sm:pb-6">
     <!-- Date Navigation Card (Large Touch Controls) -->
-    <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+    <VCard color="surface" variant="flat" rounded="xl" border class="card-content">
       <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
         <!-- Prev Week Button -->
         <button
@@ -15,7 +15,7 @@
 
         <!-- Current Date Center Display -->
         <div class="flex min-w-0 justify-center">
-          <label class="relative flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-2 text-center font-bold text-indigo-900 focus-within:outline focus-within:outline-2 focus-within:outline-indigo-500 sm:gap-2 sm:px-3">
+          <label class="relative flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-2 text-center font-bold text-blue-900 focus-within:outline focus-within:outline-2 focus-within:outline-blue-500 sm:gap-2 sm:px-3">
             <Calendar class="h-4 w-4 shrink-0 text-indigo-600" aria-hidden="true" />
             <span class="py-1.5 leading-tight tabular-nums" aria-hidden="true">{{ selectedDateLabel }}</span>
             <input
@@ -61,80 +61,80 @@
           </span>
         </div>
       </div>
-    </div>
+    </VCard>
 
     <!-- Quick Stats Cards (Clean & High Legibility) -->
-    <div class="grid grid-cols-2 gap-2.5">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4">
       <!-- Total Attendance Card -->
-      <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+      <VCard color="surface" variant="flat" rounded="xl" border class="card-content !flex items-center justify-between gap-2">
         <div>
           <div class="text-xs font-bold text-slate-400">오늘 출석</div>
-          <div class="text-2xl sm:text-3xl font-black text-emerald-600 mt-0.5">
+          <div class="mt-0.5 text-2xl font-bold tabular-nums text-emerald-600 sm:text-3xl">
             {{ todayAttendedCount }}<span class="text-xs sm:text-sm font-bold text-slate-400"> / {{ groupStudents.length }}명</span>
           </div>
         </div>
-        <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold flex-shrink-0">
-          <UserCheck class="w-6 h-6" />
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 sm:h-10 sm:w-10">
+          <UserCheck class="h-5 w-5" aria-hidden="true" />
         </div>
-      </div>
+      </VCard>
 
       <!-- Today Total Talents -->
-      <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+      <VCard color="surface" variant="flat" rounded="xl" border class="card-content !flex items-center justify-between gap-2">
         <div>
           <div class="text-xs font-bold text-slate-400">오늘 달란트 합계</div>
-          <div class="text-2xl sm:text-3xl font-black text-amber-500 mt-0.5 flex items-center gap-1">
+          <div class="mt-0.5 flex items-center gap-1 text-2xl font-bold tabular-nums text-amber-600 sm:text-3xl">
             <span>+{{ totalTodayTalents }}</span>
             <span class="text-xs sm:text-sm font-bold text-amber-600">점</span>
           </div>
         </div>
-        <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center font-bold flex-shrink-0">
-          <Coins class="w-6 h-6" />
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 sm:h-10 sm:w-10">
+          <Coins class="h-5 w-5" aria-hidden="true" />
         </div>
-      </div>
+      </VCard>
     </div>
 
     <!-- Quick Action Bar (Mark All) -->
     <div v-if="!attendanceStore.isReadOnly && groupStudents.length > 0" class="flex items-center gap-2">
-      <button
+      <VBtn
         @click="markAllAttendance(true)"
         :disabled="attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
-        class="flex-1 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-800 border border-emerald-200 rounded-xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-1.5 shadow-xs"
+        variant="tonal" height="42" class="min-w-0 flex-1 !text-blue-700"
       >
-        <CheckCircle2 class="w-4 h-4 text-emerald-600" />
+        <template #prepend><CheckCircle2 class="h-4 w-4" aria-hidden="true" /></template>
         <span>학생 전원 출석 체크</span>
-      </button>
+      </VBtn>
 
-      <button
+      <VBtn
         @click="markAllAttendance(false)"
         :disabled="attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
-        class="py-2.5 px-3 bg-red-600 text-white enabled:hover:bg-red-700 enabled:active:scale-[0.98] disabled:opacity-50 rounded-xl text-xs sm:text-sm font-bold transition"
+        color="error" variant="outlined" height="42"
         title="이 반의 출석·달란트 전체 체크 해제"
       >
         초기화
-      </button>
+      </VBtn>
     </div>
 
-    <div class="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-slate-200/80 p-1" role="group" aria-label="출석부 보기 방식">
-      <button
+    <div class="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1" role="group" aria-label="출석부 보기 방식">
+      <VBtn
         type="button"
         @click="viewMode = 'cards'"
         :aria-pressed="viewMode === 'cards'"
-        class="flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-bold transition"
-        :class="viewMode === 'cards' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+        :variant="viewMode === 'cards' ? 'flat' : 'text'"
+        :color="viewMode === 'cards' ? 'primary' : undefined"
       >
-        <LayoutGrid class="h-3.5 w-3.5" aria-hidden="true" />
+        <template #prepend><LayoutGrid class="h-4 w-4" aria-hidden="true" /></template>
         <span>카드</span>
-      </button>
-      <button
+      </VBtn>
+      <VBtn
         type="button"
         @click="viewMode = 'table'"
         :aria-pressed="viewMode === 'table'"
-        class="flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-bold transition"
-        :class="viewMode === 'table' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+        :variant="viewMode === 'table' ? 'flat' : 'text'"
+        :color="viewMode === 'table' ? 'primary' : undefined"
       >
-        <TableIcon class="h-3.5 w-3.5" aria-hidden="true" />
+        <template #prepend><TableIcon class="h-4 w-4" aria-hidden="true" /></template>
         <span>표</span>
-      </button>
+      </VBtn>
     </div>
 
     <section v-if="attendanceStore.failedChecks.length" aria-label="저장하지 못한 체크" class="space-y-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
@@ -157,7 +157,7 @@
 
     <!-- Empty Students State -->
     <div v-if="groupStudents.length === 0" class="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 text-center shadow-sm">
-      <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-3">
+      <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-3">
         <Users class="w-8 h-8" />
       </div>
       <h4 class="font-extrabold text-slate-800 text-base sm:text-lg">등록된 학생이 없습니다</h4>
@@ -166,7 +166,7 @@
       </p>
       <router-link
         to="/teacher/students"
-        class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-indigo-100 active:scale-95 transition"
+        class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-blue-100 active:scale-95 transition"
       >
         <UserPlus class="w-5 h-5" />
         <span>우리 반 학생 등록하기</span>
@@ -328,7 +328,7 @@
                   :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.isBatchSaving || submitting"
                   @click="handleCheckToggle(student.id, item.id)"
                   class="w-10 h-10 rounded-xl inline-flex items-center justify-center transition border cursor-pointer active:scale-95 disabled:cursor-not-allowed"
-                  :class="isItemChecked(student.id, item.id) ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-slate-100 text-slate-300 border-slate-200'"
+                  :class="isItemChecked(student.id, item.id) ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-slate-100 text-slate-300 border-slate-200'"
                 >
                   <Check v-if="isItemChecked(student.id, item.id)" class="w-5 h-5 stroke-[3]" />
                   <span v-else class="text-xs text-slate-300">•</span>
@@ -385,14 +385,14 @@
         </div>
 
         <!-- When not yet submitted: Big High-Visibility Button -->
-        <button
+        <VBtn
           v-else
           @click="openSubmitConfirm"
-          class="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:scale-[0.99] text-white text-sm sm:text-base font-black rounded-2xl shadow-xl shadow-blue-200 transition duration-150 flex items-center justify-center gap-2.5 touch-manipulation cursor-pointer"
+          block color="primary" variant="flat" height="48"
         >
-          <Send class="w-5 h-5" />
+          <template #prepend><Send class="h-4 w-4" aria-hidden="true" /></template>
           <span>오늘 출석부 최종 제출하기</span>
-        </button>
+        </VBtn>
       </div>
     </div>
 
@@ -428,7 +428,7 @@
         <button
           @click="executeSubmit"
           :disabled="submitting || attendanceStore.loading || attendanceStore.saveStatus === 'saving' || !!attendanceStore.failedChecks.length"
-          class="px-6 py-2.5 text-xs sm:text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200 flex items-center gap-2"
+          class="px-6 py-2.5 text-xs sm:text-sm font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-200 flex items-center gap-2"
         >
           <span v-if="submitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
           <span>제출 완료하기</span>
@@ -445,6 +445,8 @@ import { useChurchStore } from '../../stores/churchStore';
 import { useAttendanceStore } from '../../stores/attendanceStore';
 import { DBService } from '../../api/storage';
 import confetti from 'canvas-confetti';
+import { VBtn } from 'vuetify/components/VBtn';
+import { VCard } from 'vuetify/components/VCard';
 import Modal from '../../components/Modal.vue';
 import AttendanceDaySelect from '../../components/AttendanceDaySelect.vue';
 import NewcomerAttendance from '../../components/NewcomerAttendance.vue';
@@ -599,7 +601,7 @@ async function saveCheck(studentId, itemId, value) {
 const getActivePillClass = (itemId) => {
   if (itemId === 'attendance') return 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200';
   if (itemId === 'bibleReading') return 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200';
-  if (itemId === 'prayer') return 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-200';
+  if (itemId === 'prayer') return 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200';
   return 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-200';
 };
 

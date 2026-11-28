@@ -2,13 +2,13 @@
   <section class="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-200 p-3.5 shadow-sm sm:p-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-3">
-        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
           <UserRoundPlus class="h-5 w-5" aria-hidden="true" />
         </div>
         <h3 class="font-black text-slate-900">새친구 출석</h3>
       </div>
       <button type="button" :disabled="disabled || busy" :aria-expanded="showForm" @click="showForm = !showForm"
-        class="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-xl border border-indigo-100 bg-indigo-50 px-3 text-xs font-bold text-indigo-700 enabled:hover:bg-indigo-100 disabled:opacity-50">
+        class="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-xl border border-blue-100 bg-blue-50 px-3 text-xs font-bold text-blue-700 enabled:hover:bg-blue-100 disabled:opacity-50">
         <Plus v-if="!showForm" class="h-4 w-4" aria-hidden="true" />
         <X v-else class="h-4 w-4" aria-hidden="true" />
         {{ showForm ? '등록 닫기' : '새친구 등록' }}
@@ -40,7 +40,7 @@
         </select>
       </label>
       <button type="submit" :disabled="disabled || busy"
-        class="col-span-2 min-h-10 justify-self-end rounded-xl bg-indigo-600 px-4 py-2 font-bold text-white enabled:hover:bg-indigo-700 disabled:opacity-50">
+        class="col-span-2 min-h-10 justify-self-end rounded-xl bg-blue-600 px-4 py-2 font-bold text-white enabled:hover:bg-blue-700 disabled:opacity-50">
         등록
       </button>
     </form>
@@ -54,7 +54,7 @@
         :class="row.attended ? 'bg-emerald-50/50' : 'bg-slate-50/70'">
         <div class="flex min-w-0 flex-wrap items-center gap-1.5">
           <strong class="min-w-0 break-all text-slate-900">{{ row.student.name }}</strong>
-          <span class="rounded-lg bg-indigo-50 px-2 py-1 text-xs font-bold tabular-nums text-indigo-700">
+          <span class="rounded-lg bg-blue-50 px-2 py-1 text-xs font-bold tabular-nums text-blue-700">
             {{ row.count }}/8주{{ row.count === 8 ? ' · 등반 완료' : '' }}
           </span>
         </div>

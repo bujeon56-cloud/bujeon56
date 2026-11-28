@@ -18,7 +18,7 @@
           <select aria-label="출석 통계 일요일 선택" :value="attendanceStore.selectedDate" @change="onDateSelect" class="font-bold text-sm text-slate-800 bg-transparent focus:outline-none cursor-pointer">
             <option v-for="date in availableSundays" :key="date" :value="date">{{ date }}</option>
           </select>
-          <span class="shrink-0 whitespace-nowrap rounded-md bg-indigo-50 px-1 py-0.5 text-xs font-semibold text-indigo-600 sm:px-2">
+          <span class="shrink-0 whitespace-nowrap rounded-md bg-blue-50 px-1 py-0.5 text-xs font-semibold text-blue-600 sm:px-2">
             {{ getDayLabel(attendanceStore.selectedDate) }}
           </span>
         </div>
@@ -38,21 +38,21 @@
         <button
           @click="selectedDept = 'all'"
           class="px-3 py-1.5 rounded-xl text-xs font-bold transition"
-          :class="selectedDept === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+          :class="selectedDept === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
         >
           전체 (1부+2부)
         </button>
         <button
           @click="selectedDept = 'part1'"
           class="px-3 py-1.5 rounded-xl text-xs font-bold transition"
-          :class="selectedDept === 'part1' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+          :class="selectedDept === 'part1' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
         >
           1부 ({{ church.part1Groups.length }}목장)
         </button>
         <button
           @click="selectedDept = 'part2'"
           class="px-3 py-1.5 rounded-xl text-xs font-bold transition"
-          :class="selectedDept === 'part2' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+          :class="selectedDept === 'part2' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
         >
           2부 ({{ church.part2Groups.length }}목장)
         </button>
@@ -75,7 +75,7 @@
             출석률 <strong class="text-slate-800">{{ overallRate }}%</strong>
           </div>
         </div>
-        <div class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold flex-shrink-0">
+        <div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold flex-shrink-0">
           <UserCheck class="w-5 h-5" />
         </div>
       </div>
@@ -107,7 +107,7 @@
             출석률 <strong class="text-slate-800">{{ part2Rate }}%</strong> ({{ church.part2Groups.length }}개 목장)
           </div>
         </div>
-        <div class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold flex-shrink-0">
+        <div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold flex-shrink-0">
           <Church class="w-5 h-5" />
         </div>
       </div>
@@ -154,10 +154,10 @@
       </div>
 
       <!-- 2부 제출 현황 Card -->
-      <div class="bg-gradient-to-r from-purple-50/70 via-white to-white p-4 sm:p-5 rounded-2xl border border-purple-200/80 shadow-xs flex items-center justify-between">
+      <div class="bg-gradient-to-r from-blue-50/70 via-white to-white p-4 sm:p-5 rounded-2xl border border-blue-200/80 shadow-xs flex items-center justify-between">
         <div class="space-y-1">
           <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 text-[10px] font-black rounded-md bg-purple-600 text-white">
+            <span class="px-2 py-0.5 text-[10px] font-black rounded-md bg-blue-600 text-white">
               소년부 2부
             </span>
             <span class="text-xs font-black text-slate-700">출석부 제출 현황</span>
@@ -170,13 +170,13 @@
             <span class="text-slate-400 ml-1">({{ church.part2Groups.length - part2SubmittedCount }}개 목장 미제출)</span>
           </div>
         </div>
-        <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center font-black flex-shrink-0">
+        <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-black flex-shrink-0">
           <CheckCircle2 class="w-6 h-6" />
         </div>
       </div>
     </div>
 
-    <AdminPushPanel :year="church.currentYear" :date="attendanceStore.selectedDate" :groups="church.currentGroups" />
+    <!-- <AdminPushPanel :year="church.currentYear" :date="attendanceStore.selectedDate" :groups="church.currentGroups" /> -->
 
     <!-- Group-by-Group Attendance Statistics Table -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -234,7 +234,7 @@
                 <div class="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                   <span
                     class="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                    :class="g.departmentId === 'part1' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'"
+                    :class="g.departmentId === 'part1' ? 'bg-blue-50 text-blue-700' : 'bg-blue-50 text-blue-700'"
                   >
                     {{ g.departmentName }}
                   </span>
@@ -266,7 +266,7 @@
                   <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
                     <div
                       class="h-full rounded-full transition-all duration-300"
-                      :class="getGroupRate(g.id) >= 70 ? 'bg-emerald-500' : (getGroupRate(g.id) >= 40 ? 'bg-indigo-500' : 'bg-amber-400')"
+                      :class="getGroupRate(g.id) >= 70 ? 'bg-emerald-500' : (getGroupRate(g.id) >= 40 ? 'bg-blue-500' : 'bg-amber-400')"
                       :style="{ width: getGroupRate(g.id) + '%' }"
                     ></div>
                   </div>
@@ -319,7 +319,7 @@
                   <!-- View/Edit Attendance Modal -->
                   <button
                     @click="openInspectModal(g)"
-                    class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                    class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
                     title="출석부 확인 및 수정"
                   >
                     <Eye class="w-3.5 h-3.5" />
@@ -418,7 +418,7 @@
         >
           닫기
         </button>
-        <button @click="saveInspect" :disabled="!auth.isAdmin || inspectLoading || inspectSaving || !inspectDirty" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl disabled:opacity-40">{{ inspectSaving ? '저장 중…' : '저장' }}</button>
+        <button @click="saveInspect" :disabled="!auth.isAdmin || inspectLoading || inspectSaving || !inspectDirty" class="px-4 py-2 text-xs font-bold bg-blue-600 text-white rounded-xl disabled:opacity-40">{{ inspectSaving ? '저장 중…' : '저장' }}</button>
       </template>
     </Modal>
   </div>
@@ -427,7 +427,7 @@
 <script setup>
 import AttendanceDaySelect from '../../components/AttendanceDaySelect.vue';
 import NewcomerAttendance from '../../components/NewcomerAttendance.vue';
-import AdminPushPanel from '../../components/AdminPushPanel.vue';
+// import AdminPushPanel from '../../components/AdminPushPanel.vue';
 import { studentAttended } from '../../utils/newcomers.js';
 import { checkCount, checkItemMaxDays } from '../../utils/attendanceChecks.js';
 import { ref, shallowRef, computed, watch } from 'vue';

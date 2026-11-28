@@ -1,30 +1,26 @@
 <template>
-  <button v-if="accountId" type="button" aria-label="사용 매뉴얼" title="사용 매뉴얼" @click="opening = 'manual'"
-    class="flex shrink-0 items-center gap-1 rounded-xl p-2 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700">
+  <VBtn v-if="accountId" type="button" aria-label="사용 매뉴얼" title="사용 매뉴얼" @click="opening = 'manual'"
+    icon variant="text" size="44" class="shrink-0 text-slate-600">
     <BookOpen class="h-4 w-4" aria-hidden="true" />
-    <span class="hidden lg:inline">사용 매뉴얼</span>
-  </button>
+  </VBtn>
 
-  <Teleport to="body">
-    <Modal v-model="visible" :title="`${roleLabel} 사용 매뉴얼`">
-      <p class="text-sm leading-relaxed text-slate-700">{{ description }}</p>
-      <a :href="manualUrl" :download="`소년부 출석부 ${roleLabel} 매뉴얼.pptx`"
-        class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700">
-        <Download class="h-4 w-4" aria-hidden="true" /> 매뉴얼 PPT 받기
-      </a>
-      <template #footer>
-        <button v-if="opening === 'login'" type="button" class="rounded-xl px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200" @click="hidePermanently">
-          영원히 보지 않기
-        </button>
-        <button type="button" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900 hover:bg-slate-200" @click="visible = false">닫기</button>
-      </template>
-    </Modal>
-  </Teleport>
+  <Modal v-model="visible" :title="`${roleLabel} 사용 매뉴얼`">
+    <p class="text-sm leading-relaxed text-slate-700">{{ description }}</p>
+    <VBtn :href="manualUrl" :download="`소년부 출석부 ${roleLabel} 매뉴얼.pptx`" color="primary" variant="flat">
+      <template #prepend><Download class="h-4 w-4" aria-hidden="true" /></template>
+      매뉴얼 PPT 받기
+    </VBtn>
+    <template #footer>
+      <VBtn v-if="opening === 'login'" type="button" variant="text" @click="hidePermanently">영원히 보지 않기</VBtn>
+      <VBtn type="button" variant="outlined" @click="visible = false">닫기</VBtn>
+    </template>
+  </Modal>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { BookOpen, Download } from 'lucide-vue-next';
+import { VBtn } from 'vuetify/components/VBtn';
 import { useAuthStore } from '../stores/authStore';
 import Modal from './Modal.vue';
 

@@ -1,11 +1,11 @@
 <template>
-  <div class="space-y-4">
+  <div class="space-y-5 sm:space-y-6">
     <!-- Header Action Bar -->
     <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>
         <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
           <span>선생님 계정 및 반 배정 관리</span>
-          <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700">
+          <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700">
             {{ church.currentYear }}년 · 총 {{ church.currentTeachers.length }}명
           </span>
         </h3>
@@ -16,7 +16,7 @@
 
       <button
         @click="openAddModal"
-        class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-100 transition flex items-center gap-1.5 cursor-pointer"
+        class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-100 transition flex items-center gap-1.5 cursor-pointer"
       >
         <UserPlus class="w-4 h-4" />
         <span>새 선생님 등록</span>
@@ -58,7 +58,7 @@
                 <div class="flex items-center gap-2.5">
                   <div
                     class="w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs flex-shrink-0"
-                    :class="teacher.role === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'"
+                    :class="teacher.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'"
                   >
                     {{ teacher.name.charAt(0) }}
                   </div>
@@ -70,7 +70,7 @@
 
               <!-- Login ID (Code e.g. 11, 12, 114, 21, pastor) -->
               <td class="py-3.5 px-3">
-                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-indigo-50 text-indigo-800 border border-indigo-200">
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-800 border border-blue-200">
                   <Key class="w-3 h-3 text-indigo-600" />
                   {{ teacher.loginCode || teacher.email }}
                 </span>
@@ -96,7 +96,7 @@
               <td class="py-3.5 px-3">
                 <span
                   v-if="teacher.role === 'admin'"
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200"
                 >
                   <Shield class="w-3 h-3" />
                   관리자 ({{ teacher.position || '목사님/서기' }})
@@ -139,7 +139,7 @@
                 <div class="flex items-center justify-center gap-1">
                   <button
                     @click="openEditModal(teacher)"
-                    class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                    class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
                     title="선생님 정보 수정"
                   >
                     <Edit2 class="w-3.5 h-3.5" />
@@ -161,10 +161,30 @@
       </div>
     </div>
 
+    <Modal v-model="showDeleteModal" title="선생님 삭제 확인">
+      <form id="confirm-teacher-removal" class="space-y-3 text-sm" @submit.prevent="removeTeachers">
+        <p>{{ deleteRequest?.year }}년 명단에서 선생님 {{ deleteRequest?.ids.length }}명을 제외합니다. 해당 연도의 반 배정이 해제됩니다.</p>
+        <label class="block font-bold">
+          관리자 비밀번호
+          <input v-model="deletePassword" type="password" autocomplete="current-password" required :disabled="deleting"
+            class="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2" />
+        </label>
+        <p v-if="deleteError" role="alert" class="text-rose-700">{{ deleteError }}</p>
+      </form>
+      <template #footer>
+        <button type="button" :disabled="deleting" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold disabled:opacity-50"
+          @click="showDeleteModal = false">취소</button>
+        <button type="submit" form="confirm-teacher-removal" :disabled="deleting || !deletePassword"
+          class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+          {{ deleting ? '확인 중…' : '비밀번호 확인 후 삭제' }}
+        </button>
+      </template>
+    </Modal>
+
     <!-- Password Change Modal (Requested: 관리자 쪽에서 비밀번호 변경 가능) -->
     <Modal v-model="showPasswordModal" title="비밀번호 재설정">
       <p class="text-sm">{{ targetTeacher?.email }} 주소로 비밀번호 재설정 이메일을 보냅니다.</p>
-      <template #footer><button @click="saveNewPassword" class="p-3 rounded-xl bg-indigo-600 text-white">재설정 이메일 보내기</button></template>
+      <template #footer><button @click="saveNewPassword" class="p-3 rounded-xl bg-blue-600 text-white">재설정 이메일 보내기</button></template>
     </Modal>
 
     <!-- Teacher Add/Edit Modal -->
@@ -283,7 +303,7 @@
         </button>
         <button
           @click="saveTeacher"
-          class="px-5 py-2 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200 cursor-pointer"
+          class="px-5 py-2 text-xs font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-200 cursor-pointer"
         >
           {{ isEditing ? '수정 완료' : '등록 완료' }}
         </button>
@@ -305,21 +325,47 @@ import { UserPlus, Shield, CheckSquare, Edit2, Trash2, Key } from 'lucide-vue-ne
 const church = useChurchStore();
 const selectedIds = ref([]);
 const deleting = ref(false);
+const deleteRequest = ref(null);
+const deletePassword = ref('');
+const deleteError = ref('');
+function closeDeleteModal() {
+  deleteRequest.value = null;
+  deletePassword.value = '';
+  deleteError.value = '';
+}
+const showDeleteModal = computed({
+  get: () => !!deleteRequest.value,
+  set: open => { if (!open && !deleting.value) closeDeleteModal(); },
+});
 const selectableTeachers = computed(() => church.currentTeachers.filter(t => t.role !== 'admin' && t.id !== auth.currentUser?.uid));
 const allSelected = computed(() => selectableTeachers.value.length > 0 && selectableTeachers.value.every(t => selectedIds.value.includes(t.id)));
-watch(() => church.currentYear, () => { selectedIds.value = []; showModal.value = false; });
+watch(() => church.currentYear, () => { selectedIds.value = []; showModal.value = false; closeDeleteModal(); });
 watch(() => selectableTeachers.value.map(t => t.id), ids => { selectedIds.value = selectedIds.value.filter(id => ids.includes(id)); });
 const toggleAll = checked => { selectedIds.value = checked ? selectableTeachers.value.map(t => t.id) : []; };
-async function removeTeachers(ids) {
+function requestTeacherRemoval(ids) {
   if (deleting.value || !ids.length) return;
-  const year = church.currentYear;
-  if (!confirm(year + '년 명단에서 선택한 선생님 ' + ids.length + '명을 삭제하시겠습니까? 해당 연도의 반 배정만 해제되며 다른 연도와 출석 기록은 보존됩니다.')) return;
-  deleting.value = true;
-  try { await church.deleteTeachersForYear(ids, year); selectedIds.value = []; }
-  catch (error) { alert(authErrorMessage(error)); }
-  finally { deleting.value = false; }
+  closeDeleteModal();
+  deleteRequest.value = { year: church.currentYear, ids };
 }
-const deleteSelected = () => removeTeachers([...selectedIds.value]);
+async function removeTeachers() {
+  const request = deleteRequest.value;
+  if (deleting.value || !request || !deletePassword.value) return;
+  deleting.value = true;
+  deleteError.value = '';
+  try {
+    await church.deleteTeachersForYear(request.ids, request.year, deletePassword.value);
+    if (deleteRequest.value === request) { selectedIds.value = []; closeDeleteModal(); }
+  } catch (error) {
+    if (deleteRequest.value !== request) return;
+    deletePassword.value = '';
+    deleteError.value = ['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(error.code)
+      ? '관리자 비밀번호가 올바르지 않습니다.'
+      : authErrorMessage(error);
+  } finally {
+    deleting.value = false;
+  }
+}
+const deleteSelected = () => requestTeacherRemoval([...selectedIds.value]);
 
 const showModal = ref(false);
 const isEditing = ref(false);
@@ -466,5 +512,5 @@ const saveTeacher = async () => {
   } catch (error) { alert(authErrorMessage(error)); }
 };
 
-const confirmDeleteTeacher = teacher => removeTeachers([teacher.id]);
+const confirmDeleteTeacher = teacher => requestTeacherRemoval([teacher.id]);
 </script>

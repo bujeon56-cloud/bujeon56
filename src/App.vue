@@ -4,9 +4,9 @@
       v-if="auth.loading || church.loading || attendance.loading"
       role="progressbar"
       :aria-label="auth.loading ? '로그인 확인 중' : '출석부 정보 불러오는 중'"
-      class="pointer-events-none fixed inset-x-0 top-0 z-[90] h-1 overflow-hidden bg-indigo-100"
+      class="pointer-events-none fixed inset-x-0 top-0 z-[90] h-1 overflow-hidden bg-blue-100"
     >
-      <div class="loading-bar h-full w-2/5 bg-indigo-600"></div>
+      <div class="loading-bar h-full w-2/5 bg-blue-600"></div>
     </div>
     <div v-if="error" role="alert" class="fixed top-2 inset-x-2 z-[100] p-4 rounded-xl bg-rose-100 text-rose-900 shadow-lg flex justify-between gap-3">
       <span>{{ error }}</span><button @click="error = ''" aria-label="오류 안내 닫기">닫기</button>

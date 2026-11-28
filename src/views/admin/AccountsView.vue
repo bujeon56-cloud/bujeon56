@@ -4,7 +4,7 @@
     <section class="bg-white border rounded-2xl p-5 space-y-4">
       <div class="flex flex-wrap justify-between items-center gap-3">
         <h3 class="font-bold">관리자 계정 목록 · {{ admins.length }}명</h3>
-        <button @click="open()" :disabled="busy" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold">관리자 등록</button>
+        <button @click="open()" :disabled="busy" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold">관리자 등록</button>
       </div>
       <p class="text-sm text-slate-500">관리자 계정은 연도와 관계없이 모든 목장을 관리합니다. 현재 로그인한 계정은 삭제할 수 없습니다.</p>
       <div class="overflow-x-auto">
@@ -43,7 +43,7 @@
           <label class="block text-sm font-bold">현재 비밀번호<input v-model="passwordForm.current" type="password" autocomplete="current-password" class="block w-full border rounded-xl p-3 mt-1" /></label>
           <label class="block text-sm font-bold">새 비밀번호<input v-model="passwordForm.next" type="password" autocomplete="new-password" class="block w-full border rounded-xl p-3 mt-1" /></label>
           <label class="block text-sm font-bold">새 비밀번호 확인<input v-model="passwordForm.confirm" type="password" autocomplete="new-password" class="block w-full border rounded-xl p-3 mt-1" /></label>
-          <button type="button" @click="changePassword" :disabled="busy || !passwordForm.current || passwordForm.next.length < 6 || passwordForm.next !== passwordForm.confirm" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold disabled:opacity-40">비밀번호 변경</button>
+          <button type="button" @click="changePassword" :disabled="busy || !passwordForm.current || passwordForm.next.length < 6 || passwordForm.next !== passwordForm.confirm" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold disabled:opacity-40">비밀번호 변경</button>
           <p v-if="passwordError" role="alert" class="text-sm text-rose-700">{{ passwordError }}</p>
           <p v-if="passwordNotice" role="status" class="text-sm text-emerald-700">{{ passwordNotice }}</p>
         </fieldset>
@@ -51,7 +51,7 @@
       </form>
       <template #footer>
         <button @click="show = false" :disabled="busy" class="px-4 py-3 border rounded-xl">취소</button>
-        <button form="admin-form" type="submit" :disabled="busy" class="px-4 py-3 bg-indigo-600 text-white rounded-xl disabled:opacity-50">{{ busy ? '저장 중…' : '저장' }}</button>
+        <button form="admin-form" type="submit" :disabled="busy" class="px-4 py-3 bg-blue-600 text-white rounded-xl disabled:opacity-50">{{ busy ? '저장 중…' : '저장' }}</button>
       </template>
     </Modal>
   </div>

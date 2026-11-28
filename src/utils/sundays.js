@@ -25,6 +25,13 @@ export function seoulDate(date=new Date()) {
   const part=type=>parts.find(part=>part.type===type).value;
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
+export function isPastYear(year, date = new Date()) {
+  return Number(year) < Number(seoulDate(date).slice(0, 4));
+}
+export function defaultMonthForYear(year, date = new Date()) {
+  const today = seoulDate(date);
+  return String(year) === today.slice(0, 4) ? Number(today.slice(5, 7)) : 1;
+}
 export function recentSunday(date=new Date()) {
   const calendar=calendarDate(seoulDate(date));
   calendar.setUTCDate(calendar.getUTCDate()-calendar.getUTCDay());

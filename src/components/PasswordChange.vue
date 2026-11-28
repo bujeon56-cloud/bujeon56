@@ -9,7 +9,7 @@
         <p v-if="error" role="alert" class="text-sm text-rose-700">{{ error }}</p>
         <p v-if="notice" role="status" class="text-sm text-emerald-700">{{ notice }}</p>
       </form>
-      <template #footer><button type="submit" form="change-own-password" :disabled="busy" class="px-4 py-3 bg-indigo-600 text-white rounded-xl disabled:opacity-50">{{busy ? '변경 중…' : '내 비밀번호 변경'}}</button></template>
+      <template #footer><button type="submit" form="change-own-password" :disabled="busy" class="px-4 py-3 bg-blue-600 text-white rounded-xl disabled:opacity-50">{{busy ? '변경 중…' : '내 비밀번호 변경'}}</button></template>
     </Modal>
   </Teleport>
 </template>

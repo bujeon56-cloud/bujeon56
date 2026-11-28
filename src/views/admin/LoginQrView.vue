@@ -18,7 +18,7 @@
           aria-describedby="qr-site-help"
           class="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-slate-800" />
         <button type="submit" :disabled="generating"
-          class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50">
+          class="rounded-lg bg-blue-600 px-3 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50">
           QR코드 생성
         </button>
       </div>
@@ -46,7 +46,7 @@
         링크 복사
       </button>
       <a v-if="qrImage" :href="qrImage" download="출석부-로그인-QR.png"
-        class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-bold text-white hover:bg-indigo-700">
+        class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-bold text-white hover:bg-blue-700">
         <Download class="h-4 w-4" aria-hidden="true" />
         QR 이미지 저장
       </a>

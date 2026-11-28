@@ -17,17 +17,18 @@
       </div>
 
       <!-- Month Selector & Excel Export -->
-      <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-        <input 
-          type="month" 
-          v-model="selectedMonth" 
-          @change="loadTalentData"
-          class="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50 focus:bg-white cursor-pointer"
-        />
+      <div class="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto">
+        <label class="flex min-w-0 grow items-center gap-2 text-sm font-bold text-slate-700 sm:grow-0">
+          <span class="shrink-0">조회 월</span>
+          <select v-model="selectedMonth" class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 sm:flex-none">
+            <option v-for="month in 12" :key="month" :value="monthKey(church.currentYear, month)">{{ church.currentYear }}년 {{ month }}월</option>
+          </select>
+        </label>
 
         <button 
           @click="exportToExcel" 
-          class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-100 transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+          :disabled="loading || !!loadError"
+          class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-100 transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer disabled:opacity-50"
         >
           <FileSpreadsheet class="w-4 h-4" />
           <span>엑셀 다운로드</span>
@@ -35,6 +36,12 @@
       </div>
     </div>
 
+    <p v-if="loading" role="status" class="text-sm text-slate-600">달란트 통계를 불러오는 중…</p>
+    <div v-else-if="loadError" class="flex flex-wrap items-center gap-2 text-sm text-rose-700">
+      <p role="alert">{{ loadError }}</p>
+      <button type="button" class="rounded-lg border border-rose-200 px-3 py-1.5 font-bold" @click="retry++">다시 불러오기</button>
+    </div>
+    <template v-else>
     <!-- Monthly Summary Stat Cards (Clean: 1위/참여학생수 제거됨) -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <!-- Total Church Month Talents -->
@@ -61,7 +68,7 @@
             {{ part1TotalTalents }}<span class="text-xs font-bold text-blue-500">점</span>
           </div>
           <div class="text-[11px] text-slate-400 mt-1">
-            14개 목장 합계
+            {{ church.part1Groups.length }}개 목장 합계
           </div>
         </div>
         <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold flex-shrink-0">
@@ -77,10 +84,10 @@
             {{ part2TotalTalents }}<span class="text-xs font-bold text-purple-500">점</span>
           </div>
           <div class="text-[11px] text-slate-400 mt-1">
-            7개 목장 합계
+            {{ church.part2Groups.length }}개 목장 합계
           </div>
         </div>
-        <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold flex-shrink-0">
+        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold flex-shrink-0">
           <Award class="w-6 h-6" />
         </div>
       </div>
@@ -94,7 +101,7 @@
           <h4 class="font-black text-sm sm:text-base text-slate-800">
             목장별 달란트 목록 및 학생별 상세 내역
           </h4>
-          <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700">
+          <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700">
             총 {{ church.currentGroups.length }}개 목장
           </span>
         </div>
@@ -129,14 +136,14 @@
           <div 
             @click="toggleGroup(g.id)"
             class="p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/90 transition select-none"
-            :class="isGroupExpanded(g.id) ? 'bg-indigo-50/30' : 'bg-white'"
+            :class="isGroupExpanded(g.id) ? 'bg-blue-50/30' : 'bg-white'"
           >
             <!-- Left: Group Name, Badge, Teacher Name -->
             <div class="flex items-center gap-3 min-w-0">
               <button 
                 type="button"
                 class="w-7 h-7 rounded-lg flex items-center justify-center transition border flex-shrink-0"
-                :class="isGroupExpanded(g.id) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-100 text-slate-500 border-slate-200'"
+                :class="isGroupExpanded(g.id) ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 text-slate-500 border-slate-200'"
               >
                 <ChevronDown v-if="!isGroupExpanded(g.id)" class="w-4 h-4" />
                 <ChevronUp v-else class="w-4 h-4" />
@@ -146,7 +153,7 @@
                 <div class="flex items-center gap-2 flex-wrap">
                   <span 
                     class="text-[10px] font-black px-1.5 py-0.5 rounded"
-                    :class="g.departmentId === 'part1' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'"
+                    :class="g.departmentId === 'part1' ? 'bg-blue-50 text-blue-700' : 'bg-blue-50 text-blue-700'"
                   >
                     {{ g.departmentName }}
                   </span>
@@ -172,7 +179,7 @@
               </div>
 
               <div class="hidden sm:block">
-                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg">
                   {{ isGroupExpanded(g.id) ? '접기 ▲' : '학생 보기 ▼' }}
                 </span>
               </div>
@@ -243,13 +250,15 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup>
 import { gradeLabel, compareStudentNames } from '../../utils/studentFields.js';
 import { compareGroups } from '../../utils/groupOrder.js';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
+import { defaultMonthForYear } from '../../utils/sundays.js';
 import { useChurchStore } from '../../stores/churchStore';
 import { useAttendanceStore } from '../../stores/attendanceStore';
 import { formatTeacherName } from '../../api/storage';
@@ -260,11 +269,21 @@ import { Award, FileSpreadsheet, Coins, ChevronDown, ChevronUp } from 'lucide-vu
 const church = useChurchStore();
 const attendanceStore = useAttendanceStore();
 
-const currentYear = new Date().getFullYear();
-const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
-const selectedMonth = ref(`${currentYear}-${currentMonth}`);
+const monthKey = (year, month) => `${year}-${String(month).padStart(2, '0')}`;
+const preferredMonth = ref('');
+const selectedMonth = computed({
+  get() {
+    const year = church.currentYear;
+    return preferredMonth.value.startsWith(`${year}-`)
+      ? preferredMonth.value : monthKey(year, defaultMonthForYear(year));
+  },
+  set(value) { preferredMonth.value = value; },
+});
 
 const studentPointsMap = ref({});
+const loading = ref(false);
+const loadError = ref('');
+const retry = ref(0);
 
 // Accordion Expanded Groups Set
 const expandedGroupIds = ref(new Set());
@@ -294,16 +313,22 @@ const getFormattedTeacherName = (name) => {
   return formatTeacherName(name);
 };
 
-const loadTalentData = async () => {
-  if (!church.initialized) {
-    await church.initChurchData();
+watch([() => church.currentYear, selectedMonth, () => church.initialized, retry], async ([year, month, initialized], _, onCleanup) => {
+  let stale = false;
+  onCleanup(() => { stale = true; });
+  studentPointsMap.value = {};
+  loadError.value = '';
+  loading.value = true;
+  if (!initialized) return;
+  try {
+    const result = await attendanceStore.calculateMonthlyTalents(year, month);
+    if (!stale) studentPointsMap.value = result;
+  } catch {
+    if (!stale) loadError.value = '달란트 통계를 불러오지 못했습니다.';
+  } finally {
+    if (!stale) loading.value = false;
   }
-  studentPointsMap.value = await attendanceStore.calculateMonthlyTalents(church.currentYear, selectedMonth.value);
-};
-
-onMounted(() => {
-  loadTalentData();
-});
+}, { immediate: true });
 
 // Student Full Details List
 const allStudentStats = computed(() => {

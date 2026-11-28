@@ -3,13 +3,14 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {activeAttendanceYear,teacherGroupForYear,teachersForYear,yearRemovalPlan} from '../src/utils/teacherYears.js';
+import {isPastYear} from '../src/utils/sundays.js';
 const teachers=[{id:'admin',role:'admin'},{id:'shared',role:'teacher'},{id:'old',role:'teacher',year:'2025'},{id:'unassigned',role:'teacher',year:'2026'},{id:'class',role:'teacher',loginCode:'260208'}];
 const groups=[{id:'a',year:'2025',teacherId:'shared'},{id:'b',year:'2026',teacherId:'shared'}];
 
 test('activating an existing year is persisted and applied to the next teacher login', async () => {
  const source = await readFile('src/stores/churchStore.js', 'utf8');
- const activateBody = source.match(/async activateYear\(yearId\) \{([\s\S]*?)\n    \},/)[1];
- const initBody = source.match(/async initChurchData\(\) \{([\s\S]*?)\n    \},/)[1];
+ const activateBody = source.match(/async activateYear\(yearId, password\) \{([\s\S]*?)\n    \},/)[1];
+ const initBody = source.match(/async initChurchData\(\{ preserveSelectedYear = false \} = \{\}\) \{([\s\S]*?)\n    \},/)[1];
  const years = new Map([['2025',{isCurrent:false}],['2026',{isCurrent:true}]]);
  const account = {isAdmin:true,user:{id:'admin'}};
  const reads = [];
@@ -17,6 +18,7 @@ test('activating an existing year is persisted and applied to the next teacher l
    reads.push(collection);
    if (collection === 'years') return [...years].map(([id,data])=>({id,...data}));
    if (collection === 'groups') return groups;
+   if (collection === 'checkItems') return [{id:'attendance'}];
    return [];
  }};
  let rejectWrite = true;
@@ -30,18 +32,35 @@ test('activating an existing year is persisted and applied to the next teacher l
    for (const [id,fields] of writes) years.set(id,{...years.get(id),...fields});
    return result;
  };
- const activate = new Function('DBService','db','doc','runTransaction','useAuthStore',
-   `return async function(yearId){${activateBody}}`)(dbService,{},(_db,_collection,id)=>id,runTransaction,()=>account);
- const init = new Function('DBService','useAuthStore','activeAttendanceYear',`return async function(){${initBody}}`)(dbService,()=>account,activeAttendanceYear);
+ const actor = {uid:'admin',email:'admin@example.test'};
+ const activate = new Function('DBService','db','doc','runTransaction','useAuthStore','auth','EmailAuthProvider','reauthenticateWithCredential','isPastYear',
+   `return async function(yearId,password){${activateBody}}`)(
+   dbService,{},(_db,_collection,id)=>id,runTransaction,()=>account,{currentUser:actor},
+   {credential:(email,password)=>({email,password})}, async (user, credential) => {
+     assert.equal(user,actor);
+     assert.equal(credential.email,actor.email);
+     if (credential.password !== 'confirmed') throw new Error('invalid password');
+   }, year=>isPastYear(year,new Date('2025-01-01T00:00:00+09:00')),
+ );
+ const init = new Function('DBService','useAuthStore','activeAttendanceYear',`return async function({preserveSelectedYear=false}={}){${initBody}}`)(dbService,()=>account,activeAttendanceYear);
  const admin = {years:[{id:'2025',isCurrent:false},{id:'2026',isCurrent:true}],currentYear:'2026',setYear(year){this.currentYear=year;}};
- await assert.rejects(activate.call(admin,'2025'),/network/);
+ await assert.rejects(activate.call(admin,'2024','confirmed'),/지난 학년도/);
+ assert.equal(isPastYear('2025',new Date('2025-12-31T14:59:59Z')),false);
+ assert.equal(isPastYear('2025',new Date('2025-12-31T15:00:00Z')),true);
+ await assert.rejects(activate.call(admin,'2025'),/비밀번호/);
+ await assert.rejects(activate.call(admin,'2025','wrong'),/invalid password/);
+ assert.deepEqual(reads,[]);
+ await assert.rejects(activate.call(admin,'2025','confirmed'),/network/);
  assert.equal(admin.currentYear,'2026');
  assert.equal(years.get('2026').isCurrent,true);
  rejectWrite = false;
- await assert.rejects(activate.call(admin,'2027'),/찾을 수 없습니다/);
- await activate.call(admin,'2025');
+ await assert.rejects(activate.call(admin,'2027','confirmed'),/찾을 수 없습니다/);
+ await activate.call(admin,'2025','confirmed');
  assert.equal(admin.currentYear,'2025');
  assert.equal(years.get('2026').isCurrent,false);
+ admin.setYear('2026');
+ await init.call(admin, {preserveSelectedYear:true});
+ assert.equal(admin.currentYear,'2026');
  account.isAdmin = false;
  account.user = {id:'shared'};
  await assert.rejects(activate.call({},'2026'),/관리자만/);
@@ -52,6 +71,42 @@ test('activating an existing year is persisted and applied to the next teacher l
  assert.deepEqual(reads.sort(),['checkItems','students','students']);
  assert.equal(teacher.currentYear,'2025');
  assert.equal(teacherGroupForYear(teacher.groups,teacher.currentYear,account.user.id).id,'a');
+});
+
+test('teacher removal requires the current administrator password and the same selected year', async () => {
+ const source = await readFile('src/stores/churchStore.js', 'utf8');
+ const body = source.match(/async deleteTeachersForYear\(ids, year, password\) \{([\s\S]*?)\n    \},/)[1];
+ const actor = {uid:'admin',email:'admin@example.test'};
+ const auth = {currentUser:actor};
+ const admin = {isAdmin:true,user:{id:actor.uid}};
+ const state = {currentYear:'2026',teachers:structuredClone(teachers),groups:structuredClone(groups)};
+ const batches = [];
+ let switchYear = false;
+ const reauthenticate = async (user, credential) => {
+   assert.equal(user, actor);
+   assert.equal(credential.email, actor.email);
+   if (credential.password !== 'confirmed') throw new Error('invalid password');
+   if (switchYear) state.currentYear = '2025';
+ };
+ const remove = new Function('useAuthStore','auth','EmailAuthProvider','reauthenticateWithCredential','yearRemovalPlan','writeBatch','db','doc','arrayUnion',
+   `return async function(ids,year,password){${body}}`)(
+   () => admin, auth, {credential:(email,password)=>({email,password})}, reauthenticate, yearRemovalPlan,
+   () => {
+     const writes = [];
+     return {update:(...args)=>writes.push(args),commit:async()=>batches.push(writes)};
+   }, {}, (_,collection,id)=>`${collection}/${id}`, year=>[year],
+ );
+ await assert.rejects(remove.call(state,['shared'],'2026',''),/비밀번호/);
+ await assert.rejects(remove.call(state,['shared'],'2026','wrong'),/invalid password/);
+ switchYear = true;
+ await assert.rejects(remove.call(state,['shared'],'2026','confirmed'),/연도가 변경/);
+ assert.equal(batches.length,0);
+ switchYear = false;
+ state.currentYear = '2026';
+ await remove.call(state,['shared'],'2026','confirmed');
+ assert.equal(batches.length,1);
+ assert.equal(state.groups.find(group=>group.year==='2025').teacherId,'shared');
+ assert.equal(state.groups.find(group=>group.year==='2026').teacherId,null);
 });
 
 test('year creation rejects local and database duplicates before writing or changing selected year',async()=>{

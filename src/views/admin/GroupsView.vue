@@ -1,11 +1,11 @@
 <template>
-  <div class="space-y-4">
+  <div class="space-y-5 sm:space-y-6">
     <!-- Header Action Bar -->
     <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>
         <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
           <span>소년부 목장(반) 관리</span>
-          <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700">
+          <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700">
             총 {{ church.currentGroups.length }}개 목장
           </span>
         </h3>
@@ -15,7 +15,7 @@
       <div class="flex items-center gap-2">
         <button 
           @click="openAddModal" 
-          class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-100 transition flex items-center gap-1.5 cursor-pointer"
+          class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-100 transition flex items-center gap-1.5 cursor-pointer"
         >
           <Plus class="w-4 h-4" />
           <span>새 목장 추가</span>
@@ -39,10 +39,10 @@
       <button 
         @click="activeDept = 'part2'"
         class="px-4 py-2 text-xs font-extrabold rounded-xl transition flex items-center gap-2 cursor-pointer"
-        :class="activeDept === 'part2' ? 'bg-purple-600 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100'"
+        :class="activeDept === 'part2' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100'"
       >
         <span>2부 목장</span>
-        <span class="px-1.5 py-0.2 rounded-full text-[10px]" :class="activeDept === 'part2' ? 'bg-purple-700 text-white' : 'bg-slate-100 text-slate-600'">
+        <span class="px-1.5 py-0.2 rounded-full text-[10px]" :class="activeDept === 'part2' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'">
           {{ church.part2Groups.length }}
         </span>
       </button>
@@ -60,7 +60,7 @@
             <div class="flex items-center gap-2.5">
               <div 
                 class="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-sm"
-                :class="group.departmentId === 'part1' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'"
+                :class="group.departmentId === 'part1' ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'"
               >
                 {{ group.order || '•' }}
               </div>
@@ -75,13 +75,14 @@
             <div class="flex items-center gap-1">
               <button 
                 @click="openEditModal(group)" 
-                class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
                 title="수정"
               >
                 <Edit2 class="w-3.5 h-3.5" />
               </button>
               <button 
-                @click="confirmDeleteGroup(group)" 
+                @click="confirmDeleteGroup(group)"
+                :disabled="deleting"
                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                 title="삭제"
               >
@@ -100,12 +101,33 @@
               <span class="font-bold text-indigo-600">{{ getStudentsCount(group.id) }}명</span>
             </div>
           </div>
-          <button @click="openStudents(group)" :aria-label="group.departmentName + ' ' + group.name + ' 학생 관리'" class="mt-4 w-full px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-sm hover:bg-indigo-100">학생 관리</button>
+          <button @click="openStudents(group)" :aria-label="group.departmentName + ' ' + group.name + ' 학생 관리'" class="mt-4 w-full px-4 py-2.5 rounded-xl bg-blue-50 text-blue-700 font-bold text-sm hover:bg-blue-100">학생 관리</button>
         </div>
       </div>
     </div>
 
     <GroupStudentsManager v-model="showStudents" :group-id="studentGroupId" />
+
+    <Modal v-model="showDeleteModal" title="목장 삭제 확인">
+      <form id="confirm-group-removal" class="space-y-3 text-sm" @submit.prevent="deleteSelectedGroup">
+        <p>{{ deleteRequest?.year }}년 {{ deleteRequest?.name }}을(를) 삭제합니다.</p>
+        <p v-if="deleteRequest?.studentCount" class="font-bold text-rose-700">이 목장에 등록된 학생이 {{ deleteRequest.studentCount }}명 있습니다.</p>
+        <label class="block font-bold">
+          관리자 비밀번호
+          <input v-model="deletePassword" type="password" autocomplete="current-password" required :disabled="deleting"
+            class="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2" />
+        </label>
+        <p v-if="deleteError" role="alert" class="text-rose-700">{{ deleteError }}</p>
+      </form>
+      <template #footer>
+        <button type="button" :disabled="deleting" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold disabled:opacity-50"
+          @click="showDeleteModal = false">취소</button>
+        <button type="submit" form="confirm-group-removal" :disabled="deleting || !deletePassword"
+          class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+          {{ deleting ? '확인 중…' : '비밀번호 확인 후 삭제' }}
+        </button>
+      </template>
+    </Modal>
 
     <!-- Group Add/Edit Modal -->
     <Modal v-model="showModal" :title="isEditing ? '목장 정보 수정' : '새 목장 추가'">
@@ -125,7 +147,7 @@
               type="button" 
               @click="form.departmentId = 'part2'"
               class="py-2.5 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
-              :class="form.departmentId === 'part2' ? 'border-purple-500 bg-purple-50 text-purple-700 ring-2 ring-purple-100' : 'border-slate-200 text-slate-600'"
+              :class="form.departmentId === 'part2' ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-100' : 'border-slate-200 text-slate-600'"
             >
               소년부 2부
             </button>
@@ -177,7 +199,7 @@
         </button>
         <button 
           @click="saveGroup" 
-          class="px-5 py-2 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200 cursor-pointer"
+          class="px-5 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-200 cursor-pointer"
         >
           {{ isEditing ? '수정 저장' : '목장 생성' }}
         </button>
@@ -189,16 +211,30 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useChurchStore } from '../../stores/churchStore';
+import { authErrorMessage } from '../../stores/authStore';
 import { formatTeacherName } from '../../api/storage';
 import Modal from '../../components/Modal.vue';
 import GroupStudentsManager from '../../components/GroupStudentsManager.vue';
 import { Plus, Edit2, Trash2 } from 'lucide-vue-next';
 
 const church = useChurchStore();
+const deleting = ref(false);
+const deleteRequest = ref(null);
+const deletePassword = ref('');
+const deleteError = ref('');
+function closeDeleteModal() {
+  deleteRequest.value = null;
+  deletePassword.value = '';
+  deleteError.value = '';
+}
+const showDeleteModal = computed({
+  get: () => !!deleteRequest.value,
+  set: open => { if (!open && !deleting.value) closeDeleteModal(); },
+});
 const activeDept = ref('part1');
 const showStudents=ref(false),studentGroupId=ref('');
 function openStudents(group){studentGroupId.value=group.id;showStudents.value=true;}
-watch(()=>church.currentYear,()=>{showStudents.value=false;studentGroupId.value='';showModal.value=false;});
+watch(()=>church.currentYear,()=>{showStudents.value=false;studentGroupId.value='';showModal.value=false;closeDeleteModal();});
 
 const showModal = ref(false);
 const isEditing = ref(false);
@@ -281,14 +317,31 @@ const saveGroup = async () => {
   showModal.value = false;
 };
 
-const confirmDeleteGroup = async (group) => {
-  const studentCount = getStudentsCount(group.id);
-  const msg = studentCount > 0 
-    ? `'${group.name}'에 등록된 학생이 ${studentCount}명 있습니다. 정말 목장을 삭제하시겠습니까?`
-    : `'${group.name}'을(를) 삭제하시겠습니까?`;
-
-  if (confirm(msg)) {
-    await church.deleteGroup(group.id);
-  }
+const confirmDeleteGroup = group => {
+  if (deleting.value) return;
+  closeDeleteModal();
+  deleteRequest.value = {
+    id: group.id, year: church.currentYear,
+    name: `${group.departmentName} ${group.name}`, studentCount: getStudentsCount(group.id),
+  };
 };
+
+async function deleteSelectedGroup() {
+  const request = deleteRequest.value;
+  if (deleting.value || !request || !deletePassword.value) return;
+  deleting.value = true;
+  deleteError.value = '';
+  try {
+    await church.deleteGroup(request.id, request.year, deletePassword.value);
+    if (deleteRequest.value === request) closeDeleteModal();
+  } catch (error) {
+    if (deleteRequest.value !== request) return;
+    deletePassword.value = '';
+    deleteError.value = ['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(error.code)
+      ? '관리자 비밀번호가 올바르지 않습니다.'
+      : authErrorMessage(error);
+  } finally {
+    deleting.value = false;
+  }
+}
 </script>

@@ -2,10 +2,11 @@ import { defineStore } from 'pinia';
 import { isProtectedAccount } from '../utils/protectedAccounts.js';
 import { normalizeStudentFields, compareStudentNames } from '../utils/studentFields.js';
 import { compareGroups } from '../utils/groupOrder.js';
+import { isPastYear } from '../utils/sundays.js';
 import { isInAttendanceStats, isOnAttendanceRoster, newcomerAttendanceUpdate, newcomerGraduationDate } from '../utils/newcomers.js';
 import { DBService } from '../api/storage';
 import { activeAttendanceYear, teachersForYear, yearRemovalPlan, teacherGroupForYear } from '../utils/teacherYears.js';
-import { auth, db, doc, runTransaction, writeBatch, arrayUnion, createStaffAccount } from '../api/firebase';
+import { auth, db, doc, runTransaction, writeBatch, arrayUnion, createStaffAccount, EmailAuthProvider, reauthenticateWithCredential } from '../api/firebase';
 import { useAuthStore } from './authStore';
 
 export const useChurchStore = defineStore('church', {
@@ -62,7 +63,7 @@ export const useChurchStore = defineStore('church', {
   },
 
   actions: {
-    async initChurchData() {
+    async initChurchData({ preserveSelectedYear = false } = {}) {
       const account = useAuthStore();
       const user = account.user;
       if (!user) { this.$reset(); return; }
@@ -103,7 +104,7 @@ export const useChurchStore = defineStore('church', {
         
         // Find current year
         const currentYearObj = activeAttendanceYear(this.years);
-        if (currentYearObj) {
+        if (currentYearObj && !(preserveSelectedYear && this.years.some(year => year.id === this.currentYear))) {
           this.currentYear = currentYearObj.id;
         }
 
@@ -122,9 +123,18 @@ export const useChurchStore = defineStore('church', {
       this.currentYear = year;
     },
 
-    async activateYear(yearId) {
-      if (!useAuthStore().isAdmin) throw new Error('관리자만 활성 연도를 변경할 수 있습니다.');
+    async activateYear(yearId, password) {
+      const admin = useAuthStore();
+      const actor = auth.currentUser;
+      if (!admin.isAdmin || admin.user?.id !== actor?.uid) throw new Error('관리자만 활성 연도를 변경할 수 있습니다.');
+      if (isPastYear(yearId)) throw new Error('지난 학년도는 활성 연도로 전환할 수 없습니다.');
+      if (!actor?.email || !password) throw new Error('관리자 비밀번호를 입력해 주세요.');
+      await reauthenticateWithCredential(actor, EmailAuthProvider.credential(actor.email, password));
+      if (!admin.isAdmin || admin.user?.id !== actor.uid || auth.currentUser?.uid !== actor.uid) {
+        throw new Error('관리자 계정이 변경되었습니다. 다시 시도해 주세요.');
+      }
       const years = await runTransaction(db, async transaction => {
+        if (isPastYear(yearId)) throw new Error('지난 학년도는 활성 연도로 전환할 수 없습니다.');
         const registered = await DBService.getAll('years');
         const snapshots = await Promise.all(registered.map(year => transaction.get(doc(db, 'years', year.id))));
         const currentYears = snapshots.filter(snapshot => snapshot.exists());
@@ -259,7 +269,19 @@ export const useChurchStore = defineStore('church', {
       }
     },
 
-    async deleteGroup(id) {
+    async deleteGroup(id, year, password) {
+      const admin = useAuthStore();
+      const actor = auth.currentUser;
+      if (!admin.isAdmin || admin.user?.id !== actor?.uid || !actor?.email || !password) {
+        throw new Error('관리자 계정의 비밀번호를 다시 확인해 주세요.');
+      }
+      await reauthenticateWithCredential(actor, EmailAuthProvider.credential(actor.email, password));
+      if (!admin.isAdmin || admin.user?.id !== actor.uid || auth.currentUser?.uid !== actor.uid || this.currentYear !== year) {
+        throw new Error('계정 또는 선택한 연도가 변경되었습니다. 다시 시도해 주세요.');
+      }
+      if (!this.groups.some(group => group.id === id && group.year === year)) {
+        throw new Error('선택한 연도에 삭제할 목장이 없습니다.');
+      }
       await DBService.delete('groups', id);
       this.groups = this.groups.filter(g => g.id !== id);
     },
@@ -335,8 +357,17 @@ export const useChurchStore = defineStore('church', {
       }
     },
 
-    async deleteTeachersForYear(ids, year = this.currentYear) {
-      const plan = yearRemovalPlan(this.teachers, this.groups, year, ids, auth.currentUser?.uid);
+    async deleteTeachersForYear(ids, year, password) {
+      const admin = useAuthStore();
+      const actor = auth.currentUser;
+      if (!admin.isAdmin || admin.user?.id !== actor?.uid || !actor?.email || !password) {
+        throw new Error('관리자 계정의 비밀번호를 다시 확인해 주세요.');
+      }
+      await reauthenticateWithCredential(actor, EmailAuthProvider.credential(actor.email, password));
+      if (!admin.isAdmin || admin.user?.id !== actor.uid || auth.currentUser?.uid !== actor.uid || this.currentYear !== year) {
+        throw new Error('계정 또는 선택한 연도가 변경되었습니다. 다시 시도해 주세요.');
+      }
+      const plan = yearRemovalPlan(this.teachers, this.groups, year, ids, actor.uid);
       if (!plan.length) return;
       const batch = writeBatch(db);
       for (const entry of plan) {
@@ -348,10 +379,6 @@ export const useChurchStore = defineStore('church', {
         entry.teacher.removedYears = entry.removedYears;
         for (const group of entry.groups) Object.assign(group, { teacherId: null, teacherName: '미배정' });
       }
-    },
-
-    async deleteTeacher(id) {
-      return this.deleteTeachersForYear([id]);
     },
 
     async deleteAdminAccount(id) {
