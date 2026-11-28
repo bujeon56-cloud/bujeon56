@@ -73,6 +73,8 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { VAvatar } from 'vuetify/components/VAvatar';
 import { VBtn } from 'vuetify/components/VBtn';
+import Swal from 'sweetalert2/dist/sweetalert2.esm.js';
+import 'sweetalert2/dist/sweetalert2.css';
 import { useAuthStore } from '../stores/authStore';
 import { useChurchStore } from '../stores/churchStore';
 import UserManual from './UserManual.vue';
@@ -89,11 +91,26 @@ const yearLabel = computed(() => {
 });
 const currentGroup = computed(() => church.getTeacherGroup(auth.user?.id));
 const loggingOut = ref(false);
+let logoutPending = false;
 
 async function handleLogout() {
-  if (loggingOut.value) return;
-  loggingOut.value = true;
+  if (logoutPending) return;
+  logoutPending = true;
   try {
+    const { isConfirmed } = await Swal.fire({
+      titleText: '로그아웃 하시겠습니까?',
+      theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+      showCancelButton: true,
+      confirmButtonText: '로그아웃',
+      cancelButtonText: '취소',
+      confirmButtonColor: '#b91c1c',
+      customClass: { title: 'logout-confirm-title' },
+      reverseButtons: true,
+      focusCancel: true,
+      heightAuto: false,
+    });
+    if (!isConfirmed) return;
+    loggingOut.value = true;
     // if (!auth.isAdmin) {
     //   const pushCleanup = disablePush().catch(() => {});
     //   await Promise.race([pushCleanup, new Promise(resolve => setTimeout(resolve, 1000))]);
@@ -107,6 +124,15 @@ async function handleLogout() {
     }));
   } finally {
     loggingOut.value = false;
+    logoutPending = false;
   }
 }
 </script>
+
+<style scoped>
+:global(.swal2-title.logout-confirm-title) {
+  padding-inline: 0.75rem;
+  font-size: clamp(1rem, 4.5vw, 1.25rem);
+  white-space: nowrap;
+}
+</style>

@@ -1,16 +1,16 @@
 <template>
   <div class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-    <VCard color="surface" variant="flat" rounded="xl" class="card-content login-card w-full max-w-md space-y-5 !border-2 !border-blue-300">
+    <VCard color="surface" variant="flat" class="card-content login-card w-full max-w-md space-y-5 !rounded-[1.75rem] !border-2 !border-blue-300">
       <h1 class="text-center text-2xl font-bold tracking-tight text-blue-800">스마트 출석부</h1>
       <p v-if="error || auth.error" role="alert" class="p-3 bg-rose-50 text-rose-700 rounded-xl text-sm">{{ error || auth.error }}</p>
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <label class="block text-sm font-bold">아이디 또는 이메일
-          <input v-model="email" type="text" autocapitalize="none" spellcheck="false" autocomplete="username" required class="mt-1.5 block w-full rounded-lg border border-slate-300 bg-slate-50 p-3 outline-blue-500" placeholder="아이디를 입력해주세요" />
+          <input v-model="email" type="text" autocapitalize="none" spellcheck="false" autocomplete="username" required class="mt-1.5 block w-full rounded-xl border border-slate-300 bg-slate-50 p-3 outline-blue-500" placeholder="아이디를 입력해주세요" />
         </label>
         <label class="block text-sm font-bold">비밀번호
-          <input v-model="password" type="password" autocomplete="current-password" required class="mt-1.5 block w-full rounded-lg border border-slate-300 bg-slate-50 p-3 outline-blue-500" />
+          <input v-model="password" type="password" autocomplete="current-password" required class="mt-1.5 block w-full rounded-xl border border-slate-300 bg-slate-50 p-3 outline-blue-500" />
         </label>
-        <VBtn type="submit" block height="46" color="primary" variant="flat" :loading="busy" :disabled="busy">{{ busy ? '로그인 중…' : '로그인' }}</VBtn>
+        <VBtn type="submit" block height="46" color="primary" variant="flat" class="!rounded-xl" :loading="busy" :disabled="busy">{{ busy ? '로그인 중…' : '로그인' }}</VBtn>
       </form>
       <div id="pwa-install-placement" class="empty:hidden"></div>
     </VCard>
