@@ -51,6 +51,25 @@ test('anonymous and unregistered accounts cannot read students or grant themselv
   await assertFails(setDoc(doc(context.firestore(),'users','stranger'),{role:'admin'}));
  }
 });
+
+test('attendance edit history is append-only for administrators and push registrations are server-only', async () => {
+  const adminDb = env.authenticatedContext('admin').firestore();
+  const teacherDb = env.authenticatedContext('teacher').firestore();
+  const history = db => doc(db, 'attendances', recordA, 'edits', 'first');
+  const entry = { actorId: 'admin', timestamp: '2026-10-25T10:00:00Z', edits: [], notes: null };
+  await assertFails(setDoc(history(teacherDb), { ...entry, actorId: 'teacher' }));
+  await assertFails(setDoc(history(adminDb), { ...entry, actorId: 'teacher' }));
+  await assertSucceeds(setDoc(history(adminDb), entry));
+  await assertSucceeds(getDoc(history(adminDb)));
+  await assertFails(getDoc(history(teacherDb)));
+  await assertFails(updateDoc(history(adminDb), { notes: { before: '', after: 'changed' } }));
+  await assertFails(deleteDoc(history(adminDb)));
+  for (const db of [teacherDb, adminDb]) {
+    const subscription = doc(db, 'pushSubscriptions', 'device');
+    await assertFails(getDoc(subscription));
+    await assertFails(setDoc(subscription, { uid: 'teacher' }));
+  }
+});
 test('teacher can query assigned classes and students but cannot list all data',async()=>{
  const db=env.authenticatedContext('teacher').firestore();
  await assertSucceeds(getDocs(query(collection(db,'groups'),where('teacherId','==','teacher'))));

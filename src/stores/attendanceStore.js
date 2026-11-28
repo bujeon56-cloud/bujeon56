@@ -20,6 +20,7 @@ export const useAttendanceStore = defineStore('attendance', {
     loading: false,
     saveStatus: 'idle', // 'idle' | 'saving' | 'saved' | 'error'
     checkSavesPending: false,
+    failedChecksByGroup: {},
     allDateSubmissions: {}, // for admin dashboard: { [groupId]: submission }
     allDateAttendances: {}, // for admin dashboard: { [groupId]: { records } }
     statsRequest: null,
@@ -30,6 +31,7 @@ export const useAttendanceStore = defineStore('attendance', {
     isSubmitted: (state) => !!state.submission?.submitted,
     isReadOnly: (state) => !!state.submission?.submitted,
     isBatchSaving: (state) => state.saveStatus === 'saving' && !state.checkSavesPending,
+    failedChecks: (state) => Object.values(state.failedChecksByGroup[state.activeGroupKey] || {}),
     
     // Check if student attended
     isStudentAttended: (state) => (studentId) => {
@@ -114,11 +116,16 @@ export const useAttendanceStore = defineStore('attendance', {
       if (!queues) checkQueues.set(this, queues = new Map());
       let queue = queues.get(context);
       if (!queue) {
-        queue = { tail: Promise.resolve(), confirmed: { ...visibleRecords }, students: new Set(), failed: false };
+        queue = { tail: Promise.resolve(), confirmed: { ...visibleRecords }, students: new Set(), latest: new Map() };
         queues.set(context, queue);
       }
 
       queue.students.add(studentId);
+      const checkKey = JSON.stringify([studentId, checkItemId]);
+      const check = { key: checkKey, studentId, checkItemId, value };
+      queue.latest.set(checkKey, check);
+      this.dismissFailedCheck(checkKey, context);
+      const failureState = this.failedChecksByGroup;
       visibleRecords[studentId] = { ...visibleRecords[studentId], [checkItemId]: value };
       this.checkSavesPending = true;
       this.saveStatus = 'saving';
@@ -131,7 +138,11 @@ export const useAttendanceStore = defineStore('attendance', {
         if ('error' in result) throw result.error;
         queue.confirmed[studentId] = { ...queue.confirmed[studentId], ...result.patch };
       });
-      const settled = write.catch(() => { queue.failed = true; });
+      const settled = write.catch(() => {
+        if (this.failedChecksByGroup !== failureState || queue.latest.get(checkKey) !== check) return;
+        if (!failureState[context]) failureState[context] = {};
+        failureState[context][checkKey] = check;
+      });
       queue.tail = settled;
       await settled;
       if (queue.tail === settled) {
@@ -142,8 +153,8 @@ export const useAttendanceStore = defineStore('attendance', {
             else delete visibleRecords[id];
           }
           this.checkSavesPending = false;
-          this.saveStatus = queue.failed ? 'error' : 'saved';
-          if (!queue.failed) {
+          this.saveStatus = this.failedChecks.length ? 'error' : 'saved';
+          if (this.saveStatus === 'saved') {
             setTimeout(() => {
               if (this.records === visibleRecords && this.saveStatus === 'saved') this.saveStatus = 'idle';
             }, 2000);
@@ -151,6 +162,16 @@ export const useAttendanceStore = defineStore('attendance', {
         }
       }
       await write;
+    },
+
+    dismissFailedCheck(key, context = this.activeGroupKey) {
+      const failures = this.failedChecksByGroup[context];
+      if (!failures) return;
+      delete failures[key];
+      if (!Object.keys(failures).length) {
+        delete this.failedChecksByGroup[context];
+        if (context === this.activeGroupKey && this.saveStatus === 'error') this.saveStatus = 'idle';
+      }
     },
 
     // Set batch attendance for all students (e.g. "전체 출석" 버튼)
@@ -162,7 +183,10 @@ export const useAttendanceStore = defineStore('attendance', {
       try {
         if (!attended) {
           const records = await DBService.resetGroupAttendance(year, date, groupId, students, useChurchStore().checkItems);
-          if (this.activeGroupKey === context) this.records = records;
+          if (this.activeGroupKey === context) {
+            this.records = records;
+            delete this.failedChecksByGroup[context];
+          }
         } else {
           for (const student of students) {
             const records = await DBService.saveStudentAttendance(year, date, groupId, student.id, { attendance: true });

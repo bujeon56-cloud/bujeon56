@@ -135,7 +135,7 @@ test('cloud reset commits the whole target group once and leaves other groups un
  const key='attendances/2026_2026-10-25_g1';
  const docs={[key]:{year:'2026',date:'2026-10-25',groupId:'g1',records:{s:{attendance:true,prayer:true}}},other:{records:{s:{attendance:true}}}};
  let writes=0,saved;
- globalThis.__studentDb={db:{},isFirebaseConfigured:true,doc:(db,col,id)=>col+'/'+id,setDoc:async(ref,payload)=>{saved=payload;},runTransaction:async (db,fn)=>fn({get:async ref=>({exists:()=>!!docs[ref],data:()=>docs[ref]}),set:(ref,payload)=>{assert.equal(ref,key);writes++;docs[ref]=payload;}})};
+ globalThis.__studentDb={db:{},isFirebaseConfigured:true,doc:(db,col,id)=>col ? col+'/'+id : db+'/edit-1',collection:(ref,name)=>ref+'/'+name,setDoc:async(ref,payload)=>{saved=payload;},runTransaction:async (db,fn)=>fn({get:async ref=>({exists:()=>!!docs[ref],data:()=>docs[ref]}),set:(ref,payload)=>{assert.equal(ref,key);writes++;docs[ref]=payload;}})};
  const {DBService}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
  const records=await DBService.resetGroupAttendance('2026','2026-10-25','g1',[{id:'s'}],[{id:'attendance'},{id:'prayer'}]);
  assert.equal(writes,1);assert.equal(records.s.prayer,false);assert.equal(docs.other.records.s.attendance,true);
@@ -152,11 +152,18 @@ test('cloud reset commits the whole target group once and leaves other groups un
   for(const [ref,payload] of pending)docs[ref]={...docs[ref],...payload};
   return result;
  };
- const edited=await DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{attendance:true,qt:5}},'수정 메모');
+ const edited=await DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{attendance:true,qt:5}},'수정 메모','admin');
  assert.equal(edited.s.qt,5);
  assert.equal(edited.s.attendance,true);assert.equal(edited.s.prayer,true);assert.equal(edited.s.custom,true);assert.equal(edited.s.notes,'학생 메모');assert.equal(edited.other.attendance,true);
  assert.equal(docs[submissionKey].submitted,true);assert.equal(docs[submissionKey].submittedAt,'original');assert.equal(docs[submissionKey].teacherId,'teacher');assert.equal(docs[submissionKey].notes,'수정 메모');
  await assert.rejects(DBService.saveAdminAttendance('2026','2026-10-25','g1',{s:{qt:8}}),/체크 값을 확인/);
+ const history = docs[key + '/edits/edit-1'];
+ assert.equal(history.actorId, 'admin');
+ assert.deepEqual(history.edits, [
+   { studentId: 's', itemId: 'attendance', before: false, after: true },
+   { studentId: 's', itemId: 'qt', before: null, after: 5 },
+ ]);
+ assert.deepEqual(history.notes, { before: '이전 메모', after: '수정 메모' });
  const teacherEdit=await DBService.saveStudentAttendance('2026','2026-10-25','g1','s',{qt:2});
  assert.equal(teacherEdit.s.qt,2);assert.equal(teacherEdit.s.prayer,true);
  const patch = await DBService.saveStudentCheckPatch('2026', '2026-10-25', 'g1', 's', { qt: 4 });
@@ -222,5 +229,11 @@ test('attendance changes preserve records across pending saves, failures and gro
  assert.deepEqual(store.records.s, { attendance: true, qt: 2, prayer: true });
  assert.equal(store.saveStatus, 'error');
  assert.equal(store.checkSavesPending, false);
+ const [failed] = store.failedChecks;
+ assert.deepEqual(failed, { key: JSON.stringify(['s', 'qt']), studentId: 's', checkItemId: 'qt', value: 4 });
+ globalThis.__resetAction.saveStudentCheckPatch = async (year, date, group, id, patch) => patch;
+ await store.setCheck('2026', 'g1', failed.studentId, failed.checkItemId, failed.value);
+ assert.equal(store.records.s.qt, 4);
+ assert.equal(store.failedChecks.length, 0);
  t.mock.timers.tick(2000);delete globalThis.__resetAction;
 });

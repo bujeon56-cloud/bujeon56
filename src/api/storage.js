@@ -496,7 +496,13 @@ export const DBService = {
     return attendances[key].records;
   },
 
-  async saveAdminAttendance(year, date, groupId, changes, notes) {
+  async getAttendanceEditHistory(year, date, groupId) {
+    const ref = collection(db, 'attendances', `${year}_${date}_${groupId}`, 'edits');
+    const snapshot = await getDocs(query(ref, orderBy('timestamp', 'desc')));
+    return snapshot.docs.map(entry => ({ ...entry.data(), id: entry.id }));
+  },
+
+  async saveAdminAttendance(year, date, groupId, changes, notes, actorId) {
     if (!this.isUsingCloud()) throw new Error('공용 DB 연결을 확인해주세요.');
     const key = `${year}_${date}_${groupId}`;
     return runTransaction(db, async transaction => {
@@ -507,15 +513,28 @@ export const DBService = {
       if (submission && !submission.exists()) throw new Error('제출 상태가 변경되었습니다. 팝업을 다시 열어주세요.');
       const records = { ...(attendance.exists() ? attendance.data().records : {}) };
       const timestamp = new Date().toISOString();
+      const edits = [];
       for (const [studentId, checks] of Object.entries(changes)) {
         const invalidCheck = Object.entries(checks).some(([itemId, value]) =>
           typeof value !== 'boolean' && (itemId === 'attendance' || !Number.isInteger(value) || value < 0 || value > WEEK_DAYS)
         );
         if (invalidCheck) throw new Error('체크 값을 확인해주세요.');
+        for (const [itemId, after] of Object.entries(checks)) {
+          const before = records[studentId]?.[itemId] ?? null;
+          if (before !== after) edits.push({ studentId, itemId, before, after });
+        }
         records[studentId] = { ...records[studentId], ...checks, updatedAt: timestamp };
       }
       if (Object.keys(changes).length) transaction.set(attendanceRef, {year, date, groupId, records, updatedAt:timestamp}, {merge:true});
       if (submission) transaction.set(submissionRef, {notes, updatedAt:timestamp}, {merge:true});
+      const notesChanged = !!submission && (submission.data().notes || '') !== notes;
+      if (actorId && (edits.length || notesChanged)) {
+        const entry = doc(collection(attendanceRef, 'edits'));
+        transaction.set(entry, {
+          actorId, timestamp, edits,
+          notes: notesChanged ? { before: submission.data().notes || '', after: notes } : null,
+        });
+      }
       return records;
     });
   },

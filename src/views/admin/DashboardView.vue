@@ -176,23 +176,32 @@
       </div>
     </div>
 
+    <AdminPushPanel :year="church.currentYear" :date="attendanceStore.selectedDate" :groups="church.currentGroups" />
+
     <!-- Group-by-Group Attendance Statistics Table -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 p-4">
         <div class="font-extrabold text-sm text-slate-800 flex items-center gap-2">
           <span>각 목장별 출석 및 체크 항목 현황</span>
-          <span class="text-xs font-normal text-slate-400">({{ displayGroups.length }}개 목장)</span>
+          <span class="text-xs font-normal text-slate-400">({{ tableGroups.length }}개 목장)</span>
         </div>
 
-        <button
+        <div class="flex items-center gap-2">
+          <label class="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+            <input v-model="onlyUnsubmitted" type="checkbox" class="h-4 w-4 accent-blue-600" />
+            미제출만 보기
+          </label>
+          <button
           @click="refreshStats"
           class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-200/60 rounded-xl transition cursor-pointer"
           title="새로고침"
         >
           <RotateCw class="w-4 h-4" />
-        </button>
+          </button>
+        </div>
       </div>
 
+      <p v-if="onlyUnsubmitted && !attendanceStore.statsError && !attendanceStore.loading && !tableGroups.length" class="p-4 text-sm text-slate-600">선택한 부서에 미제출 목장이 없습니다.</p>
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
@@ -216,7 +225,7 @@
           </thead>
           <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
             <tr
-              v-for="g in displayGroups"
+              v-for="g in tableGroups"
               :key="g.id"
               class="hover:bg-slate-50/70 transition"
             >
@@ -336,6 +345,25 @@
         <p v-if="inspectLoading" role="status" class="text-sm">출석부를 불러오는 중…</p>
         <p v-if="inspectError" role="alert" class="text-sm text-rose-700">{{ inspectError }}</p>
         <p v-if="inspectNotice" role="status" class="text-sm text-emerald-700">{{ inspectNotice }}</p>
+        <details v-if="inspectContext" class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+          <summary class="cursor-pointer font-bold">관리자 수정 이력</summary>
+          <p v-if="historyError" class="mt-2 text-rose-700">수정 이력을 불러오지 못했습니다.</p>
+          <p v-else-if="inspectLoading" class="mt-2">불러오는 중…</p>
+          <p v-else-if="!inspectHistory.length" class="mt-2">기록된 수정 내역이 없습니다.</p>
+          <ol v-else class="mt-2 space-y-2">
+            <li v-for="entry in inspectHistory" :key="entry.id" class="rounded-lg bg-white p-2">
+              <p class="font-bold">{{ church.teachers.find(user => user.id === entry.actorId)?.name || '관리자' }} · {{ historyDate.format(new Date(entry.timestamp)) }}</p>
+              <ul class="mt-1 space-y-1">
+                <li v-for="(edit, index) in entry.edits" :key="index">
+                  {{ inspectingStudents.find(student => student.id === edit.studentId)?.name || '이전 학생' }} ·
+                  {{ church.checkItems.find(item => item.id === edit.itemId)?.label || edit.itemId }}:
+                  {{ formatEditValue(edit.before) }} → {{ formatEditValue(edit.after) }}
+                </li>
+                <li v-if="entry.notes" class="whitespace-pre-wrap break-words">메모: {{ entry.notes.before || '(없음)' }} → {{ entry.notes.after || '(없음)' }}</li>
+              </ul>
+            </li>
+          </ol>
+        </details>
         <NewcomerAttendance v-if="inspectContext" :key="inspectContext.groupId + inspectContext.date"
           :group-id="inspectContext.groupId" :date="inspectContext.date" :disabled="inspectLoading || inspectSaving || !auth.isAdmin" />
         <div class="max-h-80 overflow-auto">
@@ -399,6 +427,7 @@
 <script setup>
 import AttendanceDaySelect from '../../components/AttendanceDaySelect.vue';
 import NewcomerAttendance from '../../components/NewcomerAttendance.vue';
+import AdminPushPanel from '../../components/AdminPushPanel.vue';
 import { studentAttended } from '../../utils/newcomers.js';
 import { checkCount, checkItemMaxDays } from '../../utils/attendanceChecks.js';
 import { ref, shallowRef, computed, watch } from 'vue';
@@ -431,6 +460,11 @@ watch(()=>church.currentYear,year=>attendanceStore.resetDefaultDate(year));
 const availableSundays = computed(() => sundaysInYear(church.currentYear));
 const sundayIndex = computed(() => availableSundays.value.indexOf(attendanceStore.selectedDate));
 const selectedDept = ref('all'); // 'all', 'part1', 'part2'
+const onlyUnsubmitted = ref(false);
+const inspectHistory = ref([]);
+const historyError = ref(false);
+const historyDate = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Seoul' });
+const formatEditValue = value => value === null ? '기록 없음' : typeof value === 'boolean' ? value ? '체크' : '체크 해제' : `${value}일`;
 const inspectVisible = ref(false);
 const inspectSaving = ref(false);
 const showInspectModal = computed({get:()=>inspectVisible.value,set:value=>{if(!inspectSaving.value)inspectVisible.value=value;}});
@@ -476,9 +510,13 @@ const dynamicCheckItems = computed(() => {
 });
 
 const displayGroups = computed(() => {
-  if (selectedDept.value === 'part1') return church.part1Groups;
-  if (selectedDept.value === 'part2') return church.part2Groups;
-  return church.currentGroups;
+  return selectedDept.value === 'part1' ? church.part1Groups
+    : selectedDept.value === 'part2' ? church.part2Groups : church.currentGroups;
+});
+const tableGroups = computed(() => {
+  if (!onlyUnsubmitted.value) return displayGroups.value;
+  if (attendanceStore.statsError || attendanceStore.loading) return [];
+  return displayGroups.value.filter(group => !isGroupSubmitted(group.id));
 });
 
 const loadStats = async () => {
@@ -627,6 +665,9 @@ const openInspectModal = async (group) => {
   if(inspectSaving.value)return;
   const context={year:church.currentYear,date:attendanceStore.selectedDate,groupId:group.id};
   inspectContext.value=context;
+  inspectHistory.value = [];
+  historyError.value = false;
+  void loadInspectHistory(context);
   inspectingGroup.value = group;
   inspectingRecords.value={};inspectOriginal.value={};inspectingSubmission.value=null;inspectNotes.value='';
   inspectLoading.value=true;inspectError.value='';inspectNotice.value='';
@@ -641,13 +682,32 @@ const openInspectModal = async (group) => {
   finally{if(inspectContext.value===context)inspectLoading.value=false;}
 };
 
+async function loadInspectHistory(context) {
+  try {
+    const rows = await DBService.getAttendanceEditHistory(context.year, context.date, context.groupId);
+    if (inspectContext.value === context) inspectHistory.value = rows;
+  } catch {
+    if (inspectContext.value === context) historyError.value = true;
+  }
+}
+
 async function saveInspect(){
   if(!auth.isAdmin || inspectLoading.value || inspectSaving.value || !inspectDirty.value || !inspectContext.value)return;
   const context=inspectContext.value;
   const notes=inspectingSubmission.value && inspectNotes.value!==(inspectingSubmission.value.notes || '') ? inspectNotes.value : undefined;
   inspectSaving.value=true;inspectError.value='';inspectNotice.value='';
   try{
-    const records=await DBService.saveAdminAttendance(context.year,context.date,context.groupId,JSON.parse(JSON.stringify(inspectChanges.value)),notes);
+    const { year, date, groupId } = context;
+    const changes = JSON.parse(JSON.stringify(inspectChanges.value));
+    let actorId = auth.user.id;
+    try {
+      await DBService.getAttendanceEditHistory(year, date, groupId);
+    } catch (error) {
+      if (error.code !== 'permission-denied') throw error;
+      // The Pages deployment can precede the Firestore rules update.
+      actorId = undefined;
+    }
+    const records = await DBService.saveAdminAttendance(year, date, groupId, changes, notes, actorId);
     if(inspectContext.value!==context)return;
     inspectOriginal.value=records;inspectingRecords.value=JSON.parse(JSON.stringify(records));
     attendanceStore.allDateAttendances[context.groupId]=records;
@@ -655,7 +715,11 @@ async function saveInspect(){
       inspectingSubmission.value={...inspectingSubmission.value,notes};
       attendanceStore.allDateSubmissions[context.groupId]={...attendanceStore.allDateSubmissions[context.groupId],...inspectingSubmission.value};
     }
-    inspectNotice.value='수정 내용을 저장했습니다.';
+    inspectNotice.value = actorId
+      ? '수정 내용을 저장했습니다.'
+      : '수정 내용을 저장했습니다. 수정 이력은 Firestore 규칙 배포 후부터 기록됩니다.';
+    historyError.value = false;
+    void loadInspectHistory(context);
   }catch(error){if(inspectContext.value===context)inspectError.value=authErrorMessage(error);}
   finally{inspectSaving.value=false;}
 }

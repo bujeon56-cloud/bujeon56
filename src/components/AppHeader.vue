@@ -54,6 +54,7 @@
         </div>
 
         <ThemeToggle />
+        <TeacherPushSettings v-if="auth.user && !auth.isAdmin" />
         <UserManual />
         <!-- Logout Button (Large Touch Area) -->
         <button
@@ -82,6 +83,8 @@ import { useAuthStore } from '../stores/authStore';
 import { useChurchStore } from '../stores/churchStore';
 import UserManual from './UserManual.vue';
 import ThemeToggle from './ThemeToggle.vue';
+import TeacherPushSettings from './TeacherPushSettings.vue';
+import { disablePush } from '../api/pushNotifications';
 import { Church, LoaderCircle, LogOut } from 'lucide-vue-next';
 const auth = useAuthStore();
 const church = useChurchStore();
@@ -94,6 +97,10 @@ async function handleLogout() {
   if (loggingOut.value) return;
   loggingOut.value = true;
   try {
+    if (!auth.isAdmin) {
+      const pushCleanup = disablePush().catch(() => {});
+      await Promise.race([pushCleanup, new Promise(resolve => setTimeout(resolve, 1000))]);
+    }
     await auth.logout();
     await router.replace({ name: 'Login' });
   } catch (error) {

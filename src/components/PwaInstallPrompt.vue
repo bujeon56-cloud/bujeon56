@@ -1,7 +1,7 @@
 <template>
   <Teleport v-if="active" to="#pwa-install-placement" defer>
     <section
-      v-if="!hidden && !installed && (deferredPrompt || guide)"
+      v-if="!installed && (deferredPrompt || guide)"
       aria-labelledby="pwa-install-title"
       class="mt-5 rounded-2xl border border-blue-100 bg-blue-50/70 p-3.5"
     >
@@ -10,30 +10,21 @@
           <Smartphone class="h-5 w-5" aria-hidden="true" />
         </div>
         <div class="min-w-0 flex-1">
-          <h2 id="pwa-install-title" class="text-sm font-bold text-slate-900">출석부 앱 설치</h2>
+          <h2 id="pwa-install-title" class="text-sm font-bold text-slate-900">{{ guide?.title ?? '출석부 앱 설치' }}</h2>
           <p class="mt-1 text-xs leading-relaxed text-slate-600">
             {{ deferredPrompt ? '홈 화면에서 출석부를 바로 열 수 있어요.' : guide.description }}
           </p>
         </div>
-        <button type="button" @click="hidden = true" aria-label="설치 안내 닫기"
-          class="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-blue-100">
-          <X class="h-4 w-4" aria-hidden="true" />
-        </button>
       </div>
 
-      <div class="mt-3 flex flex-wrap gap-2">
-        <button v-if="deferredPrompt" type="button" @click="installPwa"
+      <div v-if="deferredPrompt" class="mt-3">
+        <button type="button" @click="installPwa"
           class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">
           앱 설치
         </button>
-        <button v-if="guide" type="button" @click="expanded = !expanded"
-          :aria-expanded="expanded" aria-controls="pwa-install-steps"
-          class="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50">
-          {{ expanded ? '설치 방법 접기' : '설치 방법' }}
-        </button>
       </div>
 
-      <div v-if="guide" v-show="expanded" id="pwa-install-steps" class="mt-3 border-t border-blue-100 pt-3">
+      <div v-if="guide" class="mt-3 border-t border-blue-100 pt-3">
         <ol class="list-decimal space-y-1.5 pl-5 text-xs leading-relaxed text-slate-700">
           <li v-for="step in guide.steps" :key="step">{{ step }}</li>
         </ol>
@@ -54,16 +45,14 @@
 
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue';
-import { Copy, Smartphone, X } from 'lucide-vue-next';
+import { Copy, Smartphone } from 'lucide-vue-next';
 import { getPwaInstallGuide } from './pwaInstallGuide.js';
 
 defineProps({ active: Boolean });
 
 const deferredPrompt = shallowRef(null);
 const guide = shallowRef(null);
-const hidden = ref(false);
 const installed = ref(false);
-const expanded = ref(false);
 const address = ref('');
 const addressField = ref(null);
 const showAddress = ref(false);
@@ -116,7 +105,6 @@ async function installPwa() {
     const { outcome } = await prompt.userChoice;
     if (outcome === 'accepted') onInstalled();
   } catch (error) {
-    expanded.value = true;
     console.warn('PWA 설치 창을 열지 못했습니다.', error);
   }
 }

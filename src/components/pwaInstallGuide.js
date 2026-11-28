@@ -1,6 +1,6 @@
 const iosFinish = '‘웹 앱으로 열기’가 보이면 켠 뒤 ‘추가’를 누르세요.';
 const safariSteps = ['Safari에서 공유 메뉴를 여세요. 공유 버튼은 페이지 메뉴 안에 있을 수 있습니다.', '‘홈 화면에 추가’를 선택하세요.', iosFinish];
-const androidChromeSteps = ['Chrome 주소창 옆 메뉴(⋮)를 여세요.', '‘앱 설치’ 또는 ‘홈 화면에 추가’를 선택하세요.'];
+const androidChromeSteps = ['Chrome 주소창 옆 메뉴(⋮)를 여세요.', '‘앱 설치’ 또는 ‘홈 화면에 추가’를 선택하고 화면 안내를 따르세요.'];
 
 export function getPwaInstallGuide({ userAgent = '', platform = '', maxTouchPoints = 0 }) {
   const ios = /iPhone|iPad|iPod/i.test(userAgent) ||
@@ -10,11 +10,25 @@ export function getPwaInstallGuide({ userAgent = '', platform = '', maxTouchPoin
   const embedded = /KAKAOTALK|Instagram|FBAN|FBAV|FB_IAB|\bNAVER\b|DaumApps?|\bDaum\b|Line\/|GSA\/|MicroMessenger|TikTok|;\s*wv\b/i.test(userAgent) ||
     (ios && !iosBrowser);
 
-  if (!ios && !android) return null;
+  const description = '홈 화면에서 출석부를 바로 열 수 있어요.';
+  const title = ios ? '아이폰·아이패드 앱 설치' : android ? '안드로이드 앱 설치' : '출석부 앱 설치';
+
+  if (!ios && !android) {
+    return {
+      title,
+      description: '브라우저에서 출석부를 앱으로 설치할 수 있어요.',
+      showAddress: true,
+      steps: [
+        'Chrome이나 Edge에서 출석부 주소를 여세요.',
+        '주소창의 설치 아이콘을 누르거나, 브라우저 메뉴에서 앱 설치 항목을 찾으세요.'
+      ]
+    };
+  }
 
   if (embedded) {
     const browser = ios ? 'Safari' : 'Chrome';
     return {
+      title,
       description: `홈 화면에 추가하려면 ${browser}에서 출석부를 열어 주세요.`,
       showAddress: true,
       steps: [
@@ -24,10 +38,10 @@ export function getPwaInstallGuide({ userAgent = '', platform = '', maxTouchPoin
     };
   }
 
-  const description = '홈 화면에서 출석부를 바로 열 수 있어요.';
   if (ios) {
-    if (/Version\/.*Safari\//i.test(userAgent)) return { description, steps: safariSteps };
+    if (/Version\/.*Safari\//i.test(userAgent)) return { title, description, steps: safariSteps };
     return {
+      title,
       description,
       showAddress: true,
       steps: ['공유 메뉴에서 ‘홈 화면에 추가’를 찾아 선택하세요.', iosFinish, '메뉴에 없으면 주소를 복사해 Safari에서 열고 공유 → 홈 화면에 추가를 선택하세요.']
@@ -35,14 +49,15 @@ export function getPwaInstallGuide({ userAgent = '', platform = '', maxTouchPoin
   }
 
   if (/SamsungBrowser\//i.test(userAgent)) {
-    return { description, steps: ['주소창의 추가(+) 버튼을 확인하세요.', '버튼이 없으면 메뉴(☰) → 페이지 추가 → 홈 화면을 선택하세요.'] };
+    return { title, description, steps: ['주소창의 추가(+) 버튼을 확인하세요.', '버튼이 없으면 메뉴(☰) → 페이지 추가 → 홈 화면을 선택하세요.'] };
   }
 
   if (/Chrome\//i.test(userAgent) && !/EdgA\/|OPR\/|YaBrowser\/|UCBrowser\//i.test(userAgent)) {
-    return { description, steps: androidChromeSteps };
+    return { title, description, steps: androidChromeSteps };
   }
 
   return {
+    title,
     description,
     showAddress: true,
     steps: ['브라우저 메뉴에서 ‘앱 설치’ 또는 ‘홈 화면에 추가’를 찾으세요.', '메뉴에 없으면 주소를 복사해 Chrome에서 열고 다시 시도하세요.']

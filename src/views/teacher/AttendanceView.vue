@@ -42,7 +42,7 @@
 
       <!-- Realtime Status Banner -->
       <div
-        v-if="attendanceStore.isSubmitted || attendanceStore.loading || attendanceStore.saveStatus === 'saving' || attendanceStore.saveStatus === 'saved'"
+        v-if="attendanceStore.isSubmitted || attendanceStore.loading || waitingForConnection || attendanceStore.saveStatus === 'saved'"
         class="mt-3 flex items-center border-t border-slate-100 pt-2.5 text-xs"
       >
         <!-- Status Indicator -->
@@ -50,10 +50,10 @@
           <Lock class="w-3.5 h-3.5 text-amber-600" />
           <span>제출 완료 (수정 불가)</span>
         </div>
-        <div v-else class="flex items-center gap-1.5">
-          <span v-if="attendanceStore.loading || attendanceStore.saveStatus === 'saving'" class="text-indigo-600 font-bold flex items-center gap-1">
-            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping"></span>
-            실시간 자동 저장 중...
+        <div v-else role="status" class="flex items-center gap-1.5">
+          <span v-if="attendanceStore.loading || waitingForConnection" class="flex items-center gap-1.5 font-bold text-blue-700">
+            <LoaderCircle v-if="online" class="h-4 w-4 shrink-0 motion-safe:animate-spin" aria-hidden="true" />
+            {{ attendanceStatusLabel }}
           </span>
           <span v-else-if="attendanceStore.saveStatus === 'saved'" class="text-emerald-600 font-bold flex items-center gap-1">
             <CheckCircle2 class="w-4 h-4 text-emerald-500" />
@@ -136,6 +136,24 @@
         <span>표</span>
       </button>
     </div>
+
+    <section v-if="attendanceStore.failedChecks.length" aria-label="저장하지 못한 체크" class="space-y-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
+      <h3 role="alert" class="font-bold text-rose-900">저장하지 못한 체크가 있습니다</h3>
+      <ul class="space-y-2">
+        <li v-for="failure in attendanceStore.failedChecks" :key="failure.key" class="flex flex-wrap items-center gap-2 text-xs">
+          <span class="mr-auto font-medium text-rose-900">
+            {{ groupStudents.find(student => student.id === failure.studentId)?.name || '학생' }} ·
+            {{ church.checkItems.find(item => item.id === failure.checkItemId)?.label || failure.checkItemId }}
+            ({{ typeof failure.value === 'number' ? failure.value + '일' : failure.value ? '체크' : '체크 해제' }})
+          </span>
+          <button type="button" class="rounded-lg bg-blue-600 px-3 py-2 font-bold text-white disabled:opacity-50"
+            :disabled="attendanceStore.isReadOnly || attendanceStore.loading || attendanceStore.isBatchSaving"
+            @click="saveCheck(failure.studentId, failure.checkItemId, failure.value)">재시도</button>
+          <button type="button" class="rounded-lg border border-rose-300 px-3 py-2 font-bold text-rose-900"
+            @click="attendanceStore.dismissFailedCheck(failure.key)">저장된 값 유지</button>
+        </li>
+      </ul>
+    </section>
 
     <!-- Empty Students State -->
     <div v-if="groupStudents.length === 0" class="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 text-center shadow-sm">
@@ -370,7 +388,7 @@
         <button
           v-else
           @click="openSubmitConfirm"
-          class="w-full py-4 px-6 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-[0.99] text-white text-sm sm:text-base font-black rounded-2xl shadow-xl shadow-indigo-200 transition duration-150 flex items-center justify-center gap-2.5 touch-manipulation cursor-pointer"
+          class="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:scale-[0.99] text-white text-sm sm:text-base font-black rounded-2xl shadow-xl shadow-blue-200 transition duration-150 flex items-center justify-center gap-2.5 touch-manipulation cursor-pointer"
         >
           <Send class="w-5 h-5" />
           <span>오늘 출석부 최종 제출하기</span>
@@ -409,7 +427,7 @@
         </button>
         <button
           @click="executeSubmit"
-          :disabled="submitting || attendanceStore.loading || attendanceStore.saveStatus === 'saving'"
+          :disabled="submitting || attendanceStore.loading || attendanceStore.saveStatus === 'saving' || !!attendanceStore.failedChecks.length"
           class="px-6 py-2.5 text-xs sm:text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200 flex items-center gap-2"
         >
           <span v-if="submitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -444,6 +462,7 @@ import {
   UserPlus,
   Coins,
   Lock,
+  LoaderCircle,
   Send,
   Check,
   LayoutGrid,
@@ -463,6 +482,13 @@ const viewMode = ref(localStorage.getItem('bujeon_teacher_view_mode') || 'cards'
 const showSubmitModal = ref(false);
 const submitting = ref(false);
 const submissionNotes = ref('');
+const online = ref(navigator.onLine);
+const updateOnline = () => { online.value = navigator.onLine; };
+const waitingForConnection = computed(() => !online.value && attendanceStore.saveStatus === 'saving');
+const attendanceStatusLabel = computed(() => {
+  if (attendanceStore.loading) return online.value ? '불러오는 중…' : '오프라인 · 연결을 확인해 주세요';
+  return '오프라인 · 연결되면 이어서 저장합니다';
+});
 
 watch(viewMode, (newVal) => {
   localStorage.setItem('bujeon_teacher_view_mode', newVal);
@@ -497,6 +523,8 @@ watch(() => attendanceStore.submission, submission => {
 
 let stopWatchingCheckItems;
 onMounted(() => {
+  window.addEventListener('online', updateOnline);
+  window.addEventListener('offline', updateOnline);
   const key = `${church.currentYear}_${attendanceStore.selectedDate}_${currentGroupId.value}`;
   if (attendanceStore.preloadedGroupKey === key && attendanceStore.activeGroupKey === key) {
     attendanceStore.preloadedGroupKey = '';
@@ -508,7 +536,11 @@ onMounted(() => {
     error => console.warn('Could not refresh attendance check items:', error)
   );
 });
-onUnmounted(() => stopWatchingCheckItems?.());
+onUnmounted(() => {
+  stopWatchingCheckItems?.();
+  window.removeEventListener('online', updateOnline);
+  window.removeEventListener('offline', updateOnline);
+});
 
 watch([() => attendanceStore.selectedDate, () => currentGroupId.value, () => church.currentYear], () => {
   loadData();
@@ -549,13 +581,19 @@ const handleCheckToggle = async (studentId, itemId) => {
   if (navigator.vibrate) {
     try { navigator.vibrate(25); } catch (e) {}
   }
-  await attendanceStore.setCheck(church.currentYear, currentGroupId.value, studentId, itemId, !isItemChecked(studentId, itemId));
+  await saveCheck(studentId, itemId, !isItemChecked(studentId, itemId));
 };
 
-const handleDayChange = async (studentId, itemId, days) => {
+const handleDayChange = (studentId, itemId, days) => saveCheck(studentId, itemId, days);
+
+async function saveCheck(studentId, itemId, value) {
   if (!currentGroupId.value) return alert('선택한 연도에 반을 먼저 배정해주세요.');
-  await attendanceStore.setCheck(church.currentYear, currentGroupId.value, studentId, itemId, days);
-};
+  try {
+    await attendanceStore.setCheck(church.currentYear, currentGroupId.value, studentId, itemId, value);
+  } catch (error) {
+    if (!attendanceStore.failedChecks.length && attendanceStore.saveStatus !== 'saving') throw error;
+  }
+}
 
 // Styling for Active Pill Buttons
 const getActivePillClass = (itemId) => {
@@ -607,6 +645,10 @@ const formatSubmittedTime = computed(() => {
 
 // Submit Attendance
 const openSubmitConfirm = () => {
+  if (attendanceStore.failedChecks.length) {
+    alert('저장하지 못한 체크를 재시도하거나 저장된 값을 유지한 뒤 제출해 주세요.');
+    return;
+  }
   showSubmitModal.value = true;
 };
 

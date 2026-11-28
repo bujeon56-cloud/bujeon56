@@ -38,6 +38,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        importScripts: ['./push-worker.js'],
         // Fetch manuals on demand so they do not compete with app startup.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
       }
